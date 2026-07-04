@@ -1,4 +1,5 @@
 use std::{
+    env::set_var,
     fs::File,
     io::{Read, Write, stdin, stdout},
 };
@@ -24,6 +25,11 @@ fn read_line(prompt: &str) -> String {
 }
 
 fn main() -> PolarsResult<()> {
+    unsafe {
+        set_var("POLARS_FMT_MAX_ROWS", "-1");
+        set_var("POLARS_FMT_MAX_COLS", "-1");
+    };
+
     let username = read_line("Enter your username> ");
     let bank_statement_path = read_line("Enter the path to your bank statement: ");
 
