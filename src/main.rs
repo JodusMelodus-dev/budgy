@@ -39,9 +39,15 @@ fn main() -> PolarsResult<()> {
         .left_join(lookup, col("Parent Category"), col("Original Category"))
         .select([col("Nr"), col("Parent Category"), col("New Category")]);
 
-    let df = joined.collect()?;
-
+    let df = joined.clone().collect()?;
     println!("{}", df);
+
+    println!("===== UNDEFINED CATEGORIES =====");
+    let undefined_categories = joined
+        .filter(col("New Category").is_null())
+        .select([col("Parent Category").unique()])
+        .collect()?;
+    println!("{}", undefined_categories);
 
     Ok(())
 }
