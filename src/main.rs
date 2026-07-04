@@ -2,6 +2,7 @@ use std::{
     env::set_var,
     fs::File,
     io::{Read, Write, stdin, stdout},
+    path::{self, Path},
 };
 
 use polars::{
@@ -31,17 +32,33 @@ fn main() -> PolarsResult<()> {
     };
 
     let username = read_line("Enter your username> ");
-    let bank_statement_path = read_line("Enter the path to your bank statement: ");
+    let statement_path = read_line("Enter the path to your bank statement: ");
+    let bank_statement_path = Path::new(&statement_path);
+    let bank_statement_file_name = bank_statement_path
+        .file_name()
+        .expect("Invalid path")
+        .to_str()
+        .expect("Failed to extract file name");
 
-    let lf = LazyCsvReader::new(bank_statement_path)
-        .with_has_header(true)
-        .finish()?;
-
+    println!("Opening user profile ...");
     let lookup = LazyCsvReader::new(format!("{}_lookup.csv", username))
         .with_has_header(true)
         .finish()?;
 
-    let joined = lf
+    println!("Opening {} ...", bank_statement_file_name);
+    let data = LazyCsvReader::new(bank_statement_path)
+        .with_has_header(true)
+        .finish()?;
+
+    println!("Filtering {} ...", bank_statement_file_name);
+    let filtered_data = data.filter(
+        col("Money In")
+            .is_not_null()
+            .or(col("Money Out").is_not_null().or(col("Fee").is_not_null())),
+    );
+
+    println!("Joining {} and user profile ...", bank_statement_file_name);
+    let joined = filtered_data
         .left_join(lookup, col("Parent Category"), col("Original Category"))
         .select([col("Nr"), col("Parent Category"), col("New Category")]);
 
