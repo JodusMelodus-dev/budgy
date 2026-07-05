@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 chrono = "0.4"
-polars = {version="0.44", features = ["lazy", "csv", "temporal"] }
+polars = {version="0.44", features = ["lazy", "csv", "strings", "temporal", "regex"] }
 
 [build-dependencies]
 embed-resource = "2"
