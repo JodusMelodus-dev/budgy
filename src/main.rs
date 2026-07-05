@@ -1,21 +1,15 @@
 use std::{
     env::set_var,
-    fs::File,
-    io::{Read, Write, stdin, stdout},
-    path::{self, Path},
+    io::{Write, stdin, stdout},
+    path::Path,
 };
 
 use polars::{
     datatypes::DataType,
-    df,
     error::PolarsResult,
-    io::{
-        SerReader, SerWriter,
-        csv::{read::CsvReader, write::CsvWriter},
-    },
     lazy::{
-        dsl::{Expr, col, dtype_col, lit, when},
-        frame::{IntoLazy, LazyCsvReader, LazyFileListReader},
+        dsl::{col, dtype_col, lit, when},
+        frame::{LazyCsvReader, LazyFileListReader},
     },
     prelude::NULL,
 };
