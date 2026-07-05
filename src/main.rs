@@ -5,6 +5,7 @@ use std::{
 };
 
 use polars::{
+    chunked_array::ops::SortMultipleOptions,
     datatypes::DataType,
     error::PolarsResult,
     lazy::{
@@ -28,6 +29,7 @@ fn main() -> PolarsResult<()> {
     unsafe {
         set_var("POLARS_FMT_MAX_ROWS", "-1");
         set_var("POLARS_FMT_MAX_COLS", "-1");
+        set_var("POLARS_FMT_STR_LEN", "100");
     };
 
     let username = read_line("Enter your username> ");
@@ -70,8 +72,7 @@ fn main() -> PolarsResult<()> {
     println!("Opening {} ...", bank_statement_file_name);
     let mut data = LazyCsvReader::new(bank_statement_path)
         .with_has_header(true)
-        .finish()?
-        .with_columns([dtype_col(&DataType::String).str().strip_chars(lit(""))]);
+        .finish()?;
     let schema = data.collect_schema()?;
     let old_names = schema
         .iter_names()
@@ -90,22 +91,36 @@ fn main() -> PolarsResult<()> {
             .or(col("Money Out").is_not_null().or(col("Fee").is_not_null())),
     );
 
-    let joined = filtered_data
-        .with_column(expr.alias("New Category"))
-        .select([
-            col("Nr"),
-            col("Description"),
-            col("Parent Category"),
-            col("New Category"),
+    let joined = filtered_data.with_columns([expr.alias("New Category")]);
+
+    let summary = joined
+        .clone()
+        .filter(col("New Category").is_not_null())
+        .group_by([col("New Category")])
+        .agg([
+            col("Money In").fill_null(lit(0.0)).sum().alias("Total In"),
+            col("Money Out")
+                .fill_null(lit(0.0))
+                .sum()
+                .alias("Total Out"),
+            col("Fee").fill_null(lit(0.0)).sum().alias("Total Fees"),
+            (col("Money In").fill_null(lit(0.0)).sum()
+                + col("Money Out").fill_null(lit(0.0)).sum()
+                + col("Fee").fill_null(lit(0.0)).sum())
+            .alias("Net Total"),
         ]);
 
-    let df = joined.clone().collect()?;
+    let df = summary.clone().collect()?;
     println!("{}", df);
 
     println!("===== UNDEFINED CATEGORIES =====");
     let undefined_categories = joined
         .filter(col("New Category").is_null())
-        .select([col("Parent Category").unique()])
+        .select([col("Description").unique()])
+        .sort(
+            ["Description"],
+            SortMultipleOptions::new().with_order_descending(false),
+        )
         .collect()?;
     println!("{}", undefined_categories);
 
