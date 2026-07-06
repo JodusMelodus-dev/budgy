@@ -1,5 +1,5 @@
 use std::{
-    env::set_var,
+    env::{self, set_var},
     io::{Write, stdin, stdout},
     path::Path,
 };
@@ -105,7 +105,7 @@ fn main() -> PolarsResult<()> {
         set_var("POLARS_FMT_STR_LEN", "100");
     };
 
-    let username = read_line("Enter your username> ");
+    let username = env::var("USERNAME").unwrap_or_else(|_| String::from("Unknown"));
     let statement_path = read_line("Enter the path to your bank statement: ");
     let bank_statement_path = Path::new(&statement_path);
 
