@@ -64,6 +64,11 @@ fn load_statement(path: &Path) -> PolarsResult<LazyFrame> {
     Ok(filtered_data)
 }
 
+fn load_budget(path: &Path) -> PolarsResult<LazyFrame> {
+    let budget = LazyCsvReader::new(path).with_has_header(true).finish()?;
+    Ok(budget)
+}
+
 fn generate_masks(lookup: DataFrame) -> PolarsResult<Expr> {
     let masks = lookup.column("Mask")?.str()?;
     let categories = lookup.column("New Category")?.str()?;
@@ -77,29 +82,6 @@ fn generate_masks(lookup: DataFrame) -> PolarsResult<Expr> {
         }
     }
     Ok(expr)
-}
-
-fn generate_summary(statement: LazyFrame) -> PolarsResult<()> {
-    let summary = statement
-        .clone()
-        .filter(col("New Category").is_not_null())
-        .group_by([col("New Category")])
-        .agg([
-            col("Money In").fill_null(lit(0.0)).sum().alias("Total In"),
-            col("Money Out")
-                .fill_null(lit(0.0))
-                .sum()
-                .alias("Total Out"),
-            col("Fee").fill_null(lit(0.0)).sum().alias("Total Fees"),
-            (col("Money In").fill_null(lit(0.0)).sum()
-                + col("Money Out").fill_null(lit(0.0)).sum()
-                + col("Fee").fill_null(lit(0.0)).sum())
-            .alias("Net Total"),
-        ]);
-
-    let df = summary.clone().collect()?;
-    println!("{}", df);
-    Ok(())
 }
 
 fn generate_undefined_categories(statement: LazyFrame) -> PolarsResult<()> {
@@ -133,7 +115,40 @@ fn main() -> PolarsResult<()> {
     let statement =
         load_statement(bank_statement_path)?.with_columns([mask_expression.alias("New Category")]);
 
-    generate_summary(statement.clone())?;
+    let budget = load_budget(Path::new(&format!("{}_budget.csv", username)))?;
+
+    let summary = statement
+        .clone()
+        .filter(col("New Category").is_not_null())
+        .left_join(budget, col("New Category"), col("Category"));
+
+    // println!("{}", summary.clone().collect()?);
+
+    let result = summary
+        .group_by([col("New Category")])
+        .agg([
+            col("Money In").fill_null(lit(0.0)).sum().alias("Total In"),
+            col("Money Out")
+                .fill_null(lit(0.0))
+                .sum()
+                .alias("Total Out"),
+            col("Fee").fill_null(lit(0.0)).sum().alias("Total Fees"),
+            (col("Money In").fill_null(lit(0.0)).sum()
+                + col("Money Out").fill_null(lit(0.0)).sum()
+                + col("Fee").fill_null(lit(0.0)).sum())
+            .alias("Net Total"),
+            (-(col("Budget Amount")).max() * lit(6)
+                + (col("Money In").fill_null(lit(0.0)).sum()
+                    + col("Money Out").fill_null(lit(0.0)).sum()
+                    + col("Fee").fill_null(lit(0.0)).sum()))
+            .alias("Net Budget"),
+        ])
+        .sort(
+            ["Net Budget"],
+            SortMultipleOptions::new().with_order_descending(false),
+        );
+
+    println!("{}", result.collect()?);
     generate_undefined_categories(statement)?;
 
     Ok(())
