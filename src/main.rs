@@ -145,8 +145,7 @@ fn main() -> PolarsResult<()> {
     let args = args().collect::<Vec<String>>();
 
     if args.len() > 1 {
-        let statement_path = args[1].clone();
-        let bank_statement_path = Path::new(&statement_path);
+        let bank_statement_path = Path::new(&args[1]);
 
         let lookup = load_lookup(Path::new(&format!("{}_lookup.csv", username)))?.collect()?;
         let mask_expression = generate_masks(lookup)?;
