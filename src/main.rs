@@ -14,7 +14,7 @@ use polars::{
         dsl::{Expr, StrptimeOptions, col, dtype_col, lit, when},
         frame::{LazyCsvReader, LazyFileListReader, LazyFrame},
     },
-    prelude::NULL,
+    prelude::{JoinArgs, JoinType, NULL},
 };
 
 fn read_line(prompt: &str) -> String {
@@ -57,7 +57,16 @@ fn load_statement(path: &Path) -> PolarsResult<LazyFrame> {
         .collect::<Vec<String>>();
     let new_data = data.rename(&old_names, &new_names, false);
 
-    let filtered_data = new_data.filter(
+    let data_with_dates =
+        new_data.with_columns([(col("Transaction Date").str().to_date(StrptimeOptions {
+            format: Some(PlSmallStr::from_str("%Y-%m-%d %H:%M")),
+            strict: true,
+            exact: true,
+            ..Default::default()
+        }))
+        .alias("Date")]);
+
+    let filtered_data = data_with_dates.filter(
         col("Money In")
             .is_not_null()
             .or(col("Money Out").is_not_null().or(col("Fee").is_not_null())),
@@ -67,7 +76,6 @@ fn load_statement(path: &Path) -> PolarsResult<LazyFrame> {
 
 fn load_budget(path: &Path) -> PolarsResult<LazyFrame> {
     let budget = LazyCsvReader::new(path).with_has_header(true).finish()?;
-    let today = Utc::now().date_naive();
     let budget_with_dates = budget.with_columns([
         (col("Start").str().to_date(StrptimeOptions {
             format: Some(PlSmallStr::from_str("%Y-%m-%d")),
@@ -84,18 +92,12 @@ fn load_budget(path: &Path) -> PolarsResult<LazyFrame> {
         }))
         .alias("End Date"),
     ]);
-    let filtered_budget = budget_with_dates
-        .filter(
-            col("Start Date")
-                .lt_eq(lit(today))
-                .and(col("End Date").gt_eq(lit(today))),
-        )
-        .select([
-            col("Category"),
-            col("Budget Amount"),
-            col("Start Date"),
-            col("End Date"),
-        ]);
+    let filtered_budget = budget_with_dates.select([
+        col("Category"),
+        col("Budget Amount"),
+        col("Start Date"),
+        col("End Date"),
+    ]);
 
     Ok(filtered_budget)
 }
@@ -151,9 +153,31 @@ fn main() -> PolarsResult<()> {
     let summary = statement
         .clone()
         .filter(col("New Category").is_not_null())
-        .left_join(budget, col("New Category"), col("Category"));
+        .left_join(budget, col("New Category"), col("Category"))
+        .filter(
+            col("Date")
+                .gt_eq(col("Start Date"))
+                .and(col("Date").lt_eq("End Date")),
+        );
 
-    // println!("{}", summary.clone().collect()?);
+    // println!(
+    //     "{}",
+    //     summary
+    //         .clone()
+    //         .select([
+    //             col("Nr"),
+    //             col("Date"),
+    //             col("Description"),
+    //             col("Money In"),
+    //             col("Money Out"),
+    //             col("Fee"),
+    //             col("New Category"),
+    //             col("Start Date"),
+    //             col("End Date"),
+    //             col("Budget Amount")
+    //         ])
+    //         .collect()?
+    // );
 
     let result = summary
         .group_by([col("New Category")])
