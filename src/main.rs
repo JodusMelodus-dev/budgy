@@ -4,13 +4,14 @@ use std::{
     path::Path,
 };
 
+use chrono::Utc;
 use polars::{
     chunked_array::ops::SortMultipleOptions,
-    datatypes::DataType,
+    datatypes::{DataType, PlSmallStr},
     error::PolarsResult,
     frame::DataFrame,
     lazy::{
-        dsl::{Expr, col, dtype_col, lit, when},
+        dsl::{Expr, StrptimeOptions, col, dtype_col, lit, when},
         frame::{LazyCsvReader, LazyFileListReader, LazyFrame},
     },
     prelude::NULL,
@@ -66,7 +67,37 @@ fn load_statement(path: &Path) -> PolarsResult<LazyFrame> {
 
 fn load_budget(path: &Path) -> PolarsResult<LazyFrame> {
     let budget = LazyCsvReader::new(path).with_has_header(true).finish()?;
-    Ok(budget)
+    let today = Utc::now().date_naive();
+    let budget_with_dates = budget.with_columns([
+        (col("Start").str().to_date(StrptimeOptions {
+            format: Some(PlSmallStr::from_str("%Y-%m-%d")),
+            strict: true,
+            exact: true,
+            ..Default::default()
+        }))
+        .alias("Start Date"),
+        (col("End").str().to_date(StrptimeOptions {
+            format: Some(PlSmallStr::from_str("%Y-%m-%d")),
+            strict: true,
+            exact: true,
+            ..Default::default()
+        }))
+        .alias("End Date"),
+    ]);
+    let filtered_budget = budget_with_dates
+        .filter(
+            col("Start Date")
+                .lt_eq(lit(today))
+                .and(col("End Date").gt_eq(lit(today))),
+        )
+        .select([
+            col("Category"),
+            col("Budget Amount"),
+            col("Start Date"),
+            col("End Date"),
+        ]);
+
+    Ok(filtered_budget)
 }
 
 fn generate_masks(lookup: DataFrame) -> PolarsResult<Expr> {
