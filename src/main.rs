@@ -8,12 +8,12 @@ use polars::{
     chunked_array::ops::SortMultipleOptions,
     datatypes::{DataType, PlSmallStr},
     error::PolarsResult,
-    frame::DataFrame,
+    frame::UniqueKeepStrategy,
     lazy::{
-        dsl::{Expr, StrptimeOptions, col, dtype_col, lit, when},
-        frame::{LazyCsvReader, LazyFileListReader, LazyFrame},
+        dsl::{StrptimeOptions, col, dtype_col, lit},
+        frame::{IntoLazy, LazyCsvReader, LazyFileListReader, LazyFrame},
     },
-    prelude::NULL,
+    prelude::JoinType,
 };
 
 fn read_line(prompt: &str) -> String {
@@ -105,21 +105,6 @@ fn load_budget(path: &Path) -> PolarsResult<LazyFrame> {
     Ok(filtered_budget)
 }
 
-fn generate_masks(lookup: DataFrame) -> PolarsResult<Expr> {
-    let masks = lookup.column("Mask")?.str()?;
-    let categories = lookup.column("New Category")?.str()?;
-    let mut expr = lit(NULL);
-
-    for (opt_mask, opt_category) in masks.into_iter().zip(categories.into_iter()) {
-        if let (Some(mask), Some(category)) = (opt_mask, opt_category) {
-            expr = when(col("Description").str().contains(lit(mask), true))
-                .then(lit(category))
-                .otherwise(expr);
-        }
-    }
-    Ok(expr)
-}
-
 fn generate_undefined_categories(statement: LazyFrame) -> PolarsResult<()> {
     println!("===== UNDEFINED CATEGORIES =====");
     let undefined_categories = statement
@@ -147,43 +132,39 @@ fn main() -> PolarsResult<()> {
     if args.len() > 1 {
         let bank_statement_path = Path::new(&args[1]);
 
-        let lookup = load_lookup(Path::new(&format!("{}_lookup.csv", username)))?.collect()?;
-        let mask_expression = generate_masks(lookup)?;
+        let lookup = load_lookup(Path::new(&format!("{}_lookup.csv", username)))?
+            .with_column(lit(1).alias("Join Key"));
 
-        let statement = load_statement(bank_statement_path)?
-            .with_columns([mask_expression.alias("New Category")]);
+        let mut statement =
+            load_statement(bank_statement_path)?.with_column(lit(1).alias("Join Key"));
+
+        let combined = statement.join(
+            lookup,
+            [col("Join Key")],
+            [col("Join Key")],
+            JoinType::Inner.into(),
+        );
+        let matched = combined.filter(col("Description").str().contains(col("Mask"), true));
+        statement = matched
+            .drop([col("Join Key")])
+            .unique(Some(vec!["Nr".to_string()]), UniqueKeepStrategy::First);
 
         let budget = load_budget(Path::new(&format!("{}_budget.csv", username)))?;
 
         let summary = statement
             .clone()
+            .lazy()
             .filter(col("New Category").is_not_null())
             .left_join(budget, col("New Category"), col("Category"))
             .filter(
                 col("Date")
                     .gt_eq(col("Start Date"))
                     .and(col("Date").lt_eq("End Date")),
-            );
-
-        println!(
-            "{}",
-            summary
-                .clone()
-                .select([
-                    col("Nr"),
-                    col("Date"),
-                    col("Description"),
-                    col("Money In"),
-                    col("Money Out"),
-                    col("Fee"),
-                    col("New Category"),
-                    col("Budget Amount"),
-                    col("Month Difference")
-                ])
-                .collect()?
-        );
+            )
+            .collect()?;
 
         let result = summary
+            .lazy()
             .group_by([col("New Category"), col("Start Date"), col("End Date")])
             .agg([
                 col("Money In").fill_null(lit(0.0)).sum().alias("Total In"),
