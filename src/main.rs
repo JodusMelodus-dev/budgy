@@ -1,5 +1,6 @@
 use std::{
     env::{self, args, set_var},
+    fs::File,
     io::{Write, stdin, stdout},
     path::Path,
 };
@@ -7,8 +8,9 @@ use std::{
 use polars::{
     chunked_array::ops::SortMultipleOptions,
     datatypes::{DataType, PlSmallStr},
-    error::PolarsResult,
-    frame::UniqueKeepStrategy,
+    error::{PolarsError, PolarsResult},
+    frame::{DataFrame, UniqueKeepStrategy, column::Column},
+    io::{SerWriter, csv::write::CsvWriter},
     lazy::{
         dsl::{StrptimeOptions, col, dtype_col, lit},
         frame::{IntoLazy, LazyCsvReader, LazyFileListReader, LazyFrame},
@@ -25,6 +27,23 @@ fn read_line(prompt: &str) -> String {
 }
 
 fn load_lookup(path: &Path) -> PolarsResult<LazyFrame> {
+    if !path.exists() {
+        let file = File::create(path).expect("Failed to create 'lookup.csv'");
+
+        let mut blank_lookup = DataFrame::new(vec![
+            Column::new_empty("Mask".into(), &DataType::String),
+            Column::new_empty("New Category".into(), &DataType::String),
+        ])?;
+
+        CsvWriter::new(file)
+            .include_header(true)
+            .with_separator(b',')
+            .finish(&mut blank_lookup)?;
+
+        println!("Populate lookup.csv before running Budgy again.");
+        Err(PolarsError::ComputeError("Empty lookup.csv".into()))?
+    }
+
     let mut lookup = LazyCsvReader::new(path)
         .with_has_header(true)
         .finish()?
@@ -72,6 +91,25 @@ fn load_statement(path: &Path) -> PolarsResult<LazyFrame> {
 }
 
 fn load_budget(path: &Path) -> PolarsResult<LazyFrame> {
+    if !path.exists() {
+        let file = File::create(path).expect("Failed to create 'budget.csv'");
+
+        let mut blank_budget = DataFrame::new(vec![
+            Column::new_empty("Category".into(), &DataType::String),
+            Column::new_empty("Start".into(), &DataType::Date),
+            Column::new_empty("End".into(), &DataType::Date),
+            Column::new_empty("Budget Amount".into(), &DataType::Float32),
+        ])?;
+
+        CsvWriter::new(file)
+            .include_header(true)
+            .with_separator(b',')
+            .finish(&mut blank_budget)?;
+
+        println!("Populate budget.csv before running Budgy again.");
+        Err(PolarsError::ComputeError("Empty budget.csv".into()))?
+    }
+
     let budget = LazyCsvReader::new(path).with_has_header(true).finish()?;
     let budget_with_dates = budget.with_columns([
         (col("Start").str().to_date(StrptimeOptions {
