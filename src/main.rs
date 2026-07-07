@@ -5,6 +5,7 @@ use std::{
     path::Path,
 };
 
+use eframe::egui;
 use polars::{
     chunked_array::ops::SortMultipleOptions,
     datatypes::{DataType, PlSmallStr},
@@ -157,6 +158,20 @@ fn generate_undefined_categories(statement: LazyFrame) -> PolarsResult<()> {
     Ok(())
 }
 
+struct Budgy {}
+
+impl Budgy {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl eframe::App for Budgy {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        ui.heading("Hello World");
+    }
+}
+
 fn main() -> PolarsResult<()> {
     unsafe {
         set_var("POLARS_FMT_MAX_ROWS", "-1");
@@ -167,92 +182,100 @@ fn main() -> PolarsResult<()> {
     let username = env::var("USERNAME").unwrap_or_else(|_| String::from("Unknown"));
     let args = args().collect::<Vec<String>>();
 
-    if args.len() > 1 {
-        let bank_statement_path = Path::new(&args[1]);
+    let native_options = eframe::NativeOptions::default();
+    eframe::run_native(
+        "Budgy",
+        native_options,
+        Box::new(|_cc| Ok(Box::new(Budgy::new()))),
+    )
+    .expect("Failed to run GUI");
 
-        let lookup = load_lookup(Path::new(&format!("{}_lookup.csv", username)))?
-            .with_column(lit(1).alias("Join Key"));
+    // if args.len() > 1 {
+    //     let bank_statement_path = Path::new(&args[1]);
 
-        let mut statement =
-            load_statement(bank_statement_path)?.with_column(lit(1).alias("Join Key"));
+    //     let lookup = load_lookup(Path::new(&format!("{}_lookup.csv", username)))?
+    //         .with_column(lit(1).alias("Join Key"));
 
-        let combined = statement.join(
-            lookup,
-            [col("Join Key")],
-            [col("Join Key")],
-            JoinType::Inner.into(),
-        );
-        let matched = combined.filter(col("Description").str().contains(col("Mask"), true));
-        statement = matched
-            .drop([col("Join Key")])
-            .unique(Some(vec!["Nr".to_string()]), UniqueKeepStrategy::First);
+    //     let mut statement =
+    //         load_statement(bank_statement_path)?.with_column(lit(1).alias("Join Key"));
 
-        let budget = load_budget(Path::new(&format!("{}_budget.csv", username)))?;
+    //     let combined = statement.join(
+    //         lookup,
+    //         [col("Join Key")],
+    //         [col("Join Key")],
+    //         JoinType::Inner.into(),
+    //     );
+    //     let matched = combined.filter(col("Description").str().contains(col("Mask"), true));
+    //     statement = matched
+    //         .drop([col("Join Key")])
+    //         .unique(Some(vec!["Nr".to_string()]), UniqueKeepStrategy::First);
 
-        let summary = statement
-            .clone()
-            .lazy()
-            .filter(col("New Category").is_not_null())
-            .left_join(budget, col("New Category"), col("Category"))
-            .filter(
-                col("Date")
-                    .gt_eq(col("Start Date"))
-                    .and(col("Date").lt_eq("End Date")),
-            )
-            .collect()?;
+    //     let budget = load_budget(Path::new(&format!("{}_budget.csv", username)))?;
 
-        let result = summary
-            .lazy()
-            .group_by([col("New Category"), col("Start Date"), col("End Date")])
-            .agg([
-                col("Money In").fill_null(lit(0.0)).sum().alias("Total In"),
-                col("Money Out")
-                    .fill_null(lit(0.0))
-                    .sum()
-                    .alias("Total Out"),
-                col("Fee").fill_null(lit(0.0)).sum().alias("Total Fees"),
-                (col("Money In").fill_null(lit(0.0)).sum()
-                    + col("Money Out").fill_null(lit(0.0)).sum()
-                    + col("Fee").fill_null(lit(0.0)).sum())
-                .alias("Net Total"),
-                (col("Budget Amount") * col("Month Difference"))
-                    .max()
-                    .alias("Budgetted Amount"),
-                ((col("Money In").fill_null(lit(0.0)).sum()
-                    + col("Money Out").fill_null(lit(0.0)).sum()
-                    + col("Fee").fill_null(lit(0.0)).sum())
-                    - (col("Budget Amount") * col("Month Difference")).max())
-                .alias("NET BUDGET"),
-            ])
-            .sort(
-                ["Start Date", "New Category"],
-                SortMultipleOptions::new().with_order_descending(false),
-            );
+    //     let summary = statement
+    //         .clone()
+    //         .lazy()
+    //         .filter(col("New Category").is_not_null())
+    //         .left_join(budget, col("New Category"), col("Category"))
+    //         .filter(
+    //             col("Date")
+    //                 .gt_eq(col("Start Date"))
+    //                 .and(col("Date").lt_eq("End Date")),
+    //         )
+    //         .collect()?;
 
-        println!("{}", result.clone().collect()?);
+    //     let result = summary
+    //         .lazy()
+    //         .group_by([col("New Category"), col("Start Date"), col("End Date")])
+    //         .agg([
+    //             col("Money In").fill_null(lit(0.0)).sum().alias("Total In"),
+    //             col("Money Out")
+    //                 .fill_null(lit(0.0))
+    //                 .sum()
+    //                 .alias("Total Out"),
+    //             col("Fee").fill_null(lit(0.0)).sum().alias("Total Fees"),
+    //             (col("Money In").fill_null(lit(0.0)).sum()
+    //                 + col("Money Out").fill_null(lit(0.0)).sum()
+    //                 + col("Fee").fill_null(lit(0.0)).sum())
+    //             .alias("Net Total"),
+    //             (col("Budget Amount") * col("Month Difference"))
+    //                 .max()
+    //                 .alias("Budgetted Amount"),
+    //             ((col("Money In").fill_null(lit(0.0)).sum()
+    //                 + col("Money Out").fill_null(lit(0.0)).sum()
+    //                 + col("Fee").fill_null(lit(0.0)).sum())
+    //                 - (col("Budget Amount") * col("Month Difference")).max())
+    //             .alias("NET BUDGET"),
+    //         ])
+    //         .sort(
+    //             ["Start Date", "New Category"],
+    //             SortMultipleOptions::new().with_order_descending(false),
+    //         );
 
-        let final_result = result
-            .group_by(["New Category"])
-            .agg([(col("NET BUDGET").sum()).alias("Budget Balance")])
-            .sort(
-                ["Budget Balance"],
-                SortMultipleOptions::new().with_order_descending(false),
-            );
+    //     println!("{}", result.clone().collect()?);
 
-        println!("{}", final_result.collect()?);
+    //     let final_result = result
+    //         .group_by(["New Category"])
+    //         .agg([(col("NET BUDGET").sum()).alias("Budget Balance")])
+    //         .sort(
+    //             ["Budget Balance"],
+    //             SortMultipleOptions::new().with_order_descending(false),
+    //         );
 
-        generate_undefined_categories(statement)?;
-    }
+    //     println!("{}", final_result.collect()?);
 
-    let mut input = String::new();
+    //     generate_undefined_categories(statement)?;
+    // }
 
-    while !["exit", "close", "kill"].contains(&input.as_str()) {
-        println!("MENU");
+    // let mut input = String::new();
 
-        input = read_line("> ");
-    }
+    // while !["exit", "close", "kill"].contains(&input.as_str()) {
+    //     println!("MENU");
 
-    println!("Goodbye!");
+    //     input = read_line("> ");
+    // }
+
+    // println!("Goodbye!");
 
     Ok(())
 }
