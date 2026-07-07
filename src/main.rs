@@ -1,10 +1,8 @@
 use std::{
-    env::{self, set_var},
-    io::{Write, stdin, stdout},
+    env::{self, args, set_var},
     path::Path,
 };
 
-use chrono::Utc;
 use polars::{
     chunked_array::ops::SortMultipleOptions,
     datatypes::{DataType, PlSmallStr},
@@ -14,18 +12,8 @@ use polars::{
         dsl::{Expr, StrptimeOptions, col, dtype_col, lit, when},
         frame::{LazyCsvReader, LazyFileListReader, LazyFrame},
     },
-    prelude::{JoinArgs, JoinType, NULL},
+    prelude::NULL,
 };
-
-fn read_line(prompt: &str) -> String {
-    print!("{}", prompt);
-    stdout().flush().expect("Failed to flush");
-    let mut input = String::new();
-    stdin()
-        .read_line(&mut input)
-        .expect("Failed to read string");
-    input.trim().to_string()
-}
 
 fn load_lookup(path: &Path) -> PolarsResult<LazyFrame> {
     let mut lookup = LazyCsvReader::new(path)
@@ -58,8 +46,8 @@ fn load_statement(path: &Path) -> PolarsResult<LazyFrame> {
     let new_data = data.rename(&old_names, &new_names, false);
 
     let data_with_dates =
-        new_data.with_columns([(col("Transaction Date").str().to_date(StrptimeOptions {
-            format: Some(PlSmallStr::from_str("%Y-%m-%d %H:%M")),
+        new_data.with_columns([(col("Posting Date").str().to_date(StrptimeOptions {
+            format: Some(PlSmallStr::from_str("%Y-%m-%d")),
             strict: true,
             exact: true,
             ..Default::default()
@@ -92,12 +80,18 @@ fn load_budget(path: &Path) -> PolarsResult<LazyFrame> {
         }))
         .alias("End Date"),
     ]);
-    let filtered_budget = budget_with_dates.select([
-        col("Category"),
-        col("Budget Amount"),
-        col("Start Date"),
-        col("End Date"),
-    ]);
+    let filtered_budget = budget_with_dates
+        .with_column(
+            (col("End Date").dt().month() - col("Start Date").dt().month() + lit(1))
+                .alias("Month Difference"),
+        )
+        .select([
+            col("Category"),
+            col("Budget Amount"),
+            col("Start Date"),
+            col("End Date"),
+            col("Month Difference"),
+        ]);
 
     Ok(filtered_budget)
 }
@@ -138,8 +132,10 @@ fn main() -> PolarsResult<()> {
         set_var("POLARS_FMT_STR_LEN", "100");
     };
 
+    let args = args().collect::<Vec<String>>();
+
     let username = env::var("USERNAME").unwrap_or_else(|_| String::from("Unknown"));
-    let statement_path = read_line("Enter the path to your bank statement: ");
+    let statement_path = args[1].clone();
     let bank_statement_path = Path::new(&statement_path);
 
     let lookup = load_lookup(Path::new(&format!("{}_lookup.csv", username)))?.collect()?;
@@ -160,27 +156,26 @@ fn main() -> PolarsResult<()> {
                 .and(col("Date").lt_eq("End Date")),
         );
 
-    // println!(
-    //     "{}",
-    //     summary
-    //         .clone()
-    //         .select([
-    //             col("Nr"),
-    //             col("Date"),
-    //             col("Description"),
-    //             col("Money In"),
-    //             col("Money Out"),
-    //             col("Fee"),
-    //             col("New Category"),
-    //             col("Start Date"),
-    //             col("End Date"),
-    //             col("Budget Amount")
-    //         ])
-    //         .collect()?
-    // );
+    println!(
+        "{}",
+        summary
+            .clone()
+            .select([
+                col("Nr"),
+                col("Date"),
+                col("Description"),
+                col("Money In"),
+                col("Money Out"),
+                col("Fee"),
+                col("New Category"),
+                col("Budget Amount"),
+                col("Month Difference")
+            ])
+            .collect()?
+    );
 
     let result = summary
-        .group_by([col("New Category")])
+        .group_by([col("New Category"), col("Start Date"), col("End Date")])
         .agg([
             col("Money In").fill_null(lit(0.0)).sum().alias("Total In"),
             col("Money Out")
@@ -192,18 +187,32 @@ fn main() -> PolarsResult<()> {
                 + col("Money Out").fill_null(lit(0.0)).sum()
                 + col("Fee").fill_null(lit(0.0)).sum())
             .alias("Net Total"),
-            (-(col("Budget Amount")).max() * lit(6)
-                + (col("Money In").fill_null(lit(0.0)).sum()
-                    + col("Money Out").fill_null(lit(0.0)).sum()
-                    + col("Fee").fill_null(lit(0.0)).sum()))
-            .alias("Net Budget"),
+            (col("Budget Amount") * col("Month Difference"))
+                .max()
+                .alias("Budgetted Amount"),
+            ((col("Money In").fill_null(lit(0.0)).sum()
+                + col("Money Out").fill_null(lit(0.0)).sum()
+                + col("Fee").fill_null(lit(0.0)).sum())
+                - (col("Budget Amount") * col("Month Difference")).max())
+            .alias("NET BUDGET"),
         ])
         .sort(
-            ["Net Budget"],
+            ["Start Date", "New Category"],
             SortMultipleOptions::new().with_order_descending(false),
         );
 
-    println!("{}", result.collect()?);
+    println!("{}", result.clone().collect()?);
+
+    let final_result = result
+        .group_by(["New Category"])
+        .agg([(col("NET BUDGET").sum()).alias("Budget Balance")])
+        .sort(
+            ["Budget Balance"],
+            SortMultipleOptions::new().with_order_descending(false),
+        );
+
+    println!("{}", final_result.collect()?);
+
     generate_undefined_categories(statement)?;
 
     Ok(())
