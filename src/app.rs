@@ -2,7 +2,7 @@ mod help;
 
 use std::path::{Path, PathBuf};
 
-use egui::{Color32, ViewportCommand};
+use egui::ViewportCommand;
 use polars::{
     chunked_array::ops::SortMultipleOptions,
     datatypes::AnyValue,
@@ -20,7 +20,7 @@ use help::{generate_undefined_categories, load_budget, load_lookup, load_stateme
 pub struct Budgy {
     username: String,
     budget_summary: Option<DataFrame>,
-    file_path: Option<PathBuf>,
+    statement_path: Option<PathBuf>,
 }
 
 impl Budgy {
@@ -28,28 +28,17 @@ impl Budgy {
         Self {
             username: username,
             budget_summary: None,
-            file_path: file_path.map(|p| PathBuf::from(p)),
+            statement_path: file_path.map(|p| PathBuf::from(p)),
         }
     }
 }
-
-const COLORS: [Color32; 8] = [
-    Color32::RED,
-    Color32::GREEN,
-    Color32::BLUE,
-    Color32::PURPLE,
-    Color32::YELLOW,
-    Color32::MAGENTA,
-    Color32::ORANGE,
-    Color32::GOLD,
-];
 
 impl eframe::App for Budgy {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::MenuBar::new().ui(ui, |ui| {
             ui.menu_button("File", |ui| {
                 if ui.button("Open File...").clicked() {
-                    self.file_path = FileDialog::new()
+                    self.statement_path = FileDialog::new()
                         .add_filter("CSV Files", &["csv"])
                         .pick_file();
                 }
@@ -63,7 +52,7 @@ impl eframe::App for Budgy {
         });
 
         if self.budget_summary.is_none() {
-            if let Some(path) = &self.file_path {
+            if let Some(path) = &self.statement_path {
                 let lookup = load_lookup(Path::new(&format!("{}_lookup.csv", self.username)))
                     .expect("Failed to load lookup")
                     .with_column(lit(1).alias("Join Key"));
@@ -170,11 +159,11 @@ impl eframe::App for Budgy {
                         body.rows(22.0, height, |mut row| {
                             let row_idx = row.index();
 
-                            for (i, column_name) in column_names.iter().enumerate() {
+                            for column_name in &column_names {
                                 row.col(|ui| {
                                     if let Ok(column) = df.column(column_name) {
                                         let value = column.get(row_idx).unwrap_or(AnyValue::Null);
-                                        ui.colored_label(COLORS[i % 8], format!("{}", value));
+                                        ui.label(format!("{}", value));
                                     }
                                 });
                             }
