@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use egui::Color32;
+use egui::{Color32, ViewportCommand};
 use polars::{
     chunked_array::ops::SortMultipleOptions,
     datatypes::AnyValue,
@@ -22,11 +22,11 @@ pub struct Budgy {
 }
 
 impl Budgy {
-    pub fn new(username: String) -> Self {
+    pub fn new(username: String, file_path: Option<String>) -> Self {
         Self {
             username: username,
             budget_summary: None,
-            file_path: None,
+            file_path: file_path.map(|p| PathBuf::from(p)),
         }
     }
 }
@@ -46,16 +46,19 @@ impl eframe::App for Budgy {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::MenuBar::new().ui(ui, |ui| {
             ui.menu_button("File", |ui| {
-                if ui.button("Open").clicked() {
+                if ui.button("Open File...").clicked() {
                     self.file_path = FileDialog::new()
                         .add_filter("CSV Files", &["csv"])
                         .pick_file();
                 }
+
+                ui.separator();
+
+                if ui.button("Exit").clicked() {
+                    ui.send_viewport_cmd(ViewportCommand::Close);
+                }
             });
         });
-
-        ui.heading("Budget Summary");
-        ui.separator();
 
         if self.budget_summary.is_none() {
             if let Some(path) = &self.file_path {
