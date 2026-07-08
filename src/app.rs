@@ -1,7 +1,9 @@
+mod config;
 mod help;
 
 use std::path::{Path, PathBuf};
 
+use eframe::APP_KEY;
 use egui::ViewportCommand;
 use polars::{
     chunked_array::ops::SortMultipleOptions,
@@ -17,18 +19,20 @@ use rfd::FileDialog;
 
 use help::{generate_undefined_categories, load_budget, load_lookup, load_statement};
 
+use crate::app::config::Config;
+
 pub struct Budgy {
-    username: String,
     budget_summary: Option<DataFrame>,
-    statement_path: Option<PathBuf>,
+    config: Config,
 }
 
 impl Budgy {
-    pub fn new(username: String, file_path: Option<String>) -> Self {
+    pub fn new(mut config: Config, statement_path: Option<String>) -> Self {
+        config.statement_path = statement_path.map(|p| PathBuf::from(p));
+
         Self {
-            username: username,
             budget_summary: None,
-            statement_path: file_path.map(|p| PathBuf::from(p)),
+            config,
         }
     }
 }
@@ -38,7 +42,7 @@ impl eframe::App for Budgy {
         egui::MenuBar::new().ui(ui, |ui| {
             ui.menu_button("File", |ui| {
                 if ui.button("Open File...").clicked() {
-                    self.statement_path = FileDialog::new()
+                    self.config.statement_path = FileDialog::new()
                         .add_filter("CSV Files", &["csv"])
                         .pick_file();
                 }
@@ -52,8 +56,8 @@ impl eframe::App for Budgy {
         });
 
         if self.budget_summary.is_none() {
-            if let Some(path) = &self.statement_path {
-                let lookup = load_lookup(Path::new(&format!("{}_lookup.csv", self.username)))
+            if let Some(path) = &self.config.statement_path {
+                let lookup = load_lookup(Path::new("lookup.csv"))
                     .expect("Failed to load lookup")
                     .with_column(lit(1).alias("Join Key"));
 
@@ -72,8 +76,7 @@ impl eframe::App for Budgy {
                     .drop([col("Join Key")])
                     .unique(Some(vec!["Nr".to_string()]), UniqueKeepStrategy::First);
 
-                let budget = load_budget(Path::new(&format!("{}_budget.csv", self.username)))
-                    .expect("Failed to load budget");
+                let budget = load_budget(Path::new("budget.csv")).expect("Failed to load budget");
 
                 let summary = statement
                     .clone()
@@ -171,5 +174,9 @@ impl eframe::App for Budgy {
                     });
             });
         }
+    }
+
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, APP_KEY, &self.config);
     }
 }

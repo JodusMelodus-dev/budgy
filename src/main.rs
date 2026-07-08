@@ -3,6 +3,8 @@ mod icon;
 
 use std::env;
 
+use eframe::APP_KEY;
+
 use crate::{app::Budgy, icon::generate_icon_data};
 
 fn main() {
@@ -12,7 +14,6 @@ fn main() {
         env::set_var("POLARS_FMT_STR_LEN", "100");
     };
 
-    let username = env::var("USERNAME").unwrap_or_else(|_| String::from("Unknown"));
     let args = env::args().collect::<Vec<String>>();
 
     let mut native_options = eframe::NativeOptions::default();
@@ -20,7 +21,13 @@ fn main() {
     eframe::run_native(
         "Budgy",
         native_options,
-        Box::new(|_cc| Ok(Box::new(Budgy::new(username, args.get(1).cloned())))),
+        Box::new(|cc| {
+            let config = cc
+                .storage
+                .and_then(|storage| eframe::get_value(storage, APP_KEY))
+                .unwrap_or_default();
+            Ok(Box::new(Budgy::new(config, args.get(1).cloned())))
+        }),
     )
     .expect("Failed to run GUI");
 }
