@@ -6,9 +6,10 @@ use std::{
 };
 
 use eframe::egui;
+use egui::Color32;
 use polars::{
     chunked_array::ops::SortMultipleOptions,
-    datatypes::{DataType, PlSmallStr},
+    datatypes::{AnyValue, DataType, PlSmallStr},
     error::{PolarsError, PolarsResult},
     frame::{DataFrame, UniqueKeepStrategy, column::Column},
     io::{SerWriter, csv::write::CsvWriter},
@@ -158,17 +159,56 @@ fn generate_undefined_categories(statement: LazyFrame) -> PolarsResult<()> {
     Ok(())
 }
 
-struct Budgy {}
+struct Budgy {
+    budget_summary: DataFrame,
+}
 
 impl Budgy {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(budget_summary: DataFrame) -> Self {
+        Self { budget_summary }
     }
 }
 
+const COLORS: [Color32; 8] = [
+    Color32::RED,
+    Color32::GREEN,
+    Color32::BLUE,
+    Color32::PURPLE,
+    Color32::YELLOW,
+    Color32::MAGENTA,
+    Color32::ORANGE,
+    Color32::GOLD,
+];
+
 impl eframe::App for Budgy {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        ui.heading("Hello World");
+        ui.heading("Budget Summary");
+        ui.separator();
+
+        let df = &self.budget_summary;
+        let height = df.height();
+        let column_names = df.get_column_names();
+
+        egui::ScrollArea::both().show(ui, |ui| {
+            egui::Grid::new("df_grid").striped(true).show(ui, |ui| {
+                for name in &column_names {
+                    ui.strong(name.to_string());
+                }
+                ui.end_row();
+
+                for row_idx in 0..height {
+                    for (i, column_name) in column_names.iter().enumerate() {
+                        if let Ok(column) = df.column(column_name) {
+                            let value = column.get(row_idx).unwrap_or(AnyValue::Null);
+
+                            let text = format!("{}", value);
+                            ui.colored_label(COLORS[i % 8], text);
+                        }
+                    }
+                    ui.end_row();
+                }
+            });
+        });
     }
 }
 
@@ -182,100 +222,88 @@ fn main() -> PolarsResult<()> {
     let username = env::var("USERNAME").unwrap_or_else(|_| String::from("Unknown"));
     let args = args().collect::<Vec<String>>();
 
-    let native_options = eframe::NativeOptions::default();
-    eframe::run_native(
-        "Budgy",
-        native_options,
-        Box::new(|_cc| Ok(Box::new(Budgy::new()))),
-    )
-    .expect("Failed to run GUI");
+    if args.len() > 1 {
+        let bank_statement_path = Path::new(&args[1]);
 
-    // if args.len() > 1 {
-    //     let bank_statement_path = Path::new(&args[1]);
+        let lookup = load_lookup(Path::new(&format!("{}_lookup.csv", username)))?
+            .with_column(lit(1).alias("Join Key"));
 
-    //     let lookup = load_lookup(Path::new(&format!("{}_lookup.csv", username)))?
-    //         .with_column(lit(1).alias("Join Key"));
+        let mut statement =
+            load_statement(bank_statement_path)?.with_column(lit(1).alias("Join Key"));
 
-    //     let mut statement =
-    //         load_statement(bank_statement_path)?.with_column(lit(1).alias("Join Key"));
+        let combined = statement.join(
+            lookup,
+            [col("Join Key")],
+            [col("Join Key")],
+            JoinType::Inner.into(),
+        );
+        let matched = combined.filter(col("Description").str().contains(col("Mask"), true));
+        statement = matched
+            .drop([col("Join Key")])
+            .unique(Some(vec!["Nr".to_string()]), UniqueKeepStrategy::First);
 
-    //     let combined = statement.join(
-    //         lookup,
-    //         [col("Join Key")],
-    //         [col("Join Key")],
-    //         JoinType::Inner.into(),
-    //     );
-    //     let matched = combined.filter(col("Description").str().contains(col("Mask"), true));
-    //     statement = matched
-    //         .drop([col("Join Key")])
-    //         .unique(Some(vec!["Nr".to_string()]), UniqueKeepStrategy::First);
+        let budget = load_budget(Path::new(&format!("{}_budget.csv", username)))?;
 
-    //     let budget = load_budget(Path::new(&format!("{}_budget.csv", username)))?;
+        let summary = statement
+            .clone()
+            .lazy()
+            .filter(col("New Category").is_not_null())
+            .left_join(budget, col("New Category"), col("Category"))
+            .filter(
+                col("Date")
+                    .gt_eq(col("Start Date"))
+                    .and(col("Date").lt_eq("End Date")),
+            )
+            .collect()?;
 
-    //     let summary = statement
-    //         .clone()
-    //         .lazy()
-    //         .filter(col("New Category").is_not_null())
-    //         .left_join(budget, col("New Category"), col("Category"))
-    //         .filter(
-    //             col("Date")
-    //                 .gt_eq(col("Start Date"))
-    //                 .and(col("Date").lt_eq("End Date")),
-    //         )
-    //         .collect()?;
+        let result = summary
+            .clone()
+            .lazy()
+            .group_by([col("New Category"), col("Start Date"), col("End Date")])
+            .agg([
+                col("Money In").fill_null(lit(0.0)).sum().alias("Total In"),
+                col("Money Out")
+                    .fill_null(lit(0.0))
+                    .sum()
+                    .alias("Total Out"),
+                col("Fee").fill_null(lit(0.0)).sum().alias("Total Fees"),
+                (col("Money In").fill_null(lit(0.0)).sum()
+                    + col("Money Out").fill_null(lit(0.0)).sum()
+                    + col("Fee").fill_null(lit(0.0)).sum())
+                .alias("Net Total"),
+                (col("Budget Amount") * col("Month Difference"))
+                    .max()
+                    .alias("Budgetted Amount"),
+                ((col("Money In").fill_null(lit(0.0)).sum()
+                    + col("Money Out").fill_null(lit(0.0)).sum()
+                    + col("Fee").fill_null(lit(0.0)).sum())
+                    - (col("Budget Amount") * col("Month Difference")).max())
+                .alias("NET BUDGET"),
+            ])
+            .sort(
+                ["Start Date", "New Category"],
+                SortMultipleOptions::new().with_order_descending(false),
+            );
 
-    //     let result = summary
-    //         .lazy()
-    //         .group_by([col("New Category"), col("Start Date"), col("End Date")])
-    //         .agg([
-    //             col("Money In").fill_null(lit(0.0)).sum().alias("Total In"),
-    //             col("Money Out")
-    //                 .fill_null(lit(0.0))
-    //                 .sum()
-    //                 .alias("Total Out"),
-    //             col("Fee").fill_null(lit(0.0)).sum().alias("Total Fees"),
-    //             (col("Money In").fill_null(lit(0.0)).sum()
-    //                 + col("Money Out").fill_null(lit(0.0)).sum()
-    //                 + col("Fee").fill_null(lit(0.0)).sum())
-    //             .alias("Net Total"),
-    //             (col("Budget Amount") * col("Month Difference"))
-    //                 .max()
-    //                 .alias("Budgetted Amount"),
-    //             ((col("Money In").fill_null(lit(0.0)).sum()
-    //                 + col("Money Out").fill_null(lit(0.0)).sum()
-    //                 + col("Fee").fill_null(lit(0.0)).sum())
-    //                 - (col("Budget Amount") * col("Month Difference")).max())
-    //             .alias("NET BUDGET"),
-    //         ])
-    //         .sort(
-    //             ["Start Date", "New Category"],
-    //             SortMultipleOptions::new().with_order_descending(false),
-    //         );
+        let final_result = result
+            .group_by(["New Category"])
+            .agg([(col("NET BUDGET").sum()).alias("Budget Balance")])
+            .sort(
+                ["Budget Balance"],
+                SortMultipleOptions::new().with_order_descending(false),
+            );
 
-    //     println!("{}", result.clone().collect()?);
+        // generate_undefined_categories(statement)?;
 
-    //     let final_result = result
-    //         .group_by(["New Category"])
-    //         .agg([(col("NET BUDGET").sum()).alias("Budget Balance")])
-    //         .sort(
-    //             ["Budget Balance"],
-    //             SortMultipleOptions::new().with_order_descending(false),
-    //         );
+        let budget_summary = summary;
 
-    //     println!("{}", final_result.collect()?);
-
-    //     generate_undefined_categories(statement)?;
-    // }
-
-    // let mut input = String::new();
-
-    // while !["exit", "close", "kill"].contains(&input.as_str()) {
-    //     println!("MENU");
-
-    //     input = read_line("> ");
-    // }
-
-    // println!("Goodbye!");
-
+        let native_options = eframe::NativeOptions::default();
+        eframe::run_native(
+            "Budgy",
+            native_options,
+            Box::new(|_cc| Ok(Box::new(Budgy::new(budget_summary)))),
+        )
+        .expect("Failed to run GUI");
+    }
     Ok(())
 }
