@@ -1,7 +1,6 @@
 use std::{
     env::{self, args, set_var},
     fs::File,
-    io::{Write, stdin, stdout},
     path::Path,
 };
 
@@ -11,10 +10,7 @@ use polars::{
     chunked_array::ops::SortMultipleOptions,
     datatypes::{AnyValue, DataType, PlSmallStr},
     error::{PolarsError, PolarsResult},
-    frame::{
-        DataFrame, UniqueKeepStrategy,
-        column::{self, Column},
-    },
+    frame::{DataFrame, UniqueKeepStrategy, column::Column},
     io::{SerWriter, csv::write::CsvWriter},
     lazy::{
         dsl::{StrptimeOptions, col, dtype_col, lit},
@@ -22,14 +18,6 @@ use polars::{
     },
     prelude::JoinType,
 };
-
-fn read_line(prompt: &str) -> String {
-    print!("{}", prompt);
-    stdout().flush().expect("Failed to flush");
-    let mut buffer = String::new();
-    stdin().read_line(&mut buffer).expect("Failed to read line");
-    buffer.trim().to_string()
-}
 
 fn load_lookup(path: &Path) -> PolarsResult<LazyFrame> {
     if !path.exists() {
@@ -148,18 +136,15 @@ fn load_budget(path: &Path) -> PolarsResult<LazyFrame> {
     Ok(filtered_budget)
 }
 
-fn generate_undefined_categories(statement: LazyFrame) -> PolarsResult<()> {
-    println!("===== UNDEFINED CATEGORIES =====");
-    let undefined_categories = statement
+fn generate_undefined_categories(statement: LazyFrame) -> PolarsResult<DataFrame> {
+    statement
         .filter(col("New Category").is_null())
         .select([col("Description").unique()])
         .sort(
             ["Description"],
             SortMultipleOptions::new().with_order_descending(false),
         )
-        .collect()?;
-    println!("{}", undefined_categories);
-    Ok(())
+        .collect()
 }
 
 struct Budgy {
@@ -307,9 +292,9 @@ fn main() -> PolarsResult<()> {
                 SortMultipleOptions::new().with_order_descending(false),
             );
 
-        // generate_undefined_categories(statement)?;
+        generate_undefined_categories(statement)?;
 
-        let budget_summary = summary;
+        let budget_summary = final_result.collect()?;
 
         let native_options = eframe::NativeOptions::default();
         eframe::run_native(
