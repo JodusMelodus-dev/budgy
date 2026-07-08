@@ -11,7 +11,10 @@ use polars::{
     chunked_array::ops::SortMultipleOptions,
     datatypes::{AnyValue, DataType, PlSmallStr},
     error::{PolarsError, PolarsResult},
-    frame::{DataFrame, UniqueKeepStrategy, column::Column},
+    frame::{
+        DataFrame, UniqueKeepStrategy,
+        column::{self, Column},
+    },
     io::{SerWriter, csv::write::CsvWriter},
     lazy::{
         dsl::{StrptimeOptions, col, dtype_col, lit},
@@ -189,25 +192,36 @@ impl eframe::App for Budgy {
         let height = df.height();
         let column_names = df.get_column_names();
 
-        egui::ScrollArea::both().show(ui, |ui| {
-            egui::Grid::new("df_grid").striped(true).show(ui, |ui| {
-                for name in &column_names {
-                    ui.strong(name.to_string());
-                }
-                ui.end_row();
-
-                for row_idx in 0..height {
-                    for (i, column_name) in column_names.iter().enumerate() {
-                        if let Ok(column) = df.column(column_name) {
-                            let value = column.get(row_idx).unwrap_or(AnyValue::Null);
-
-                            let text = format!("{}", value);
-                            ui.colored_label(COLORS[i % 8], text);
-                        }
+        egui::ScrollArea::horizontal().show(ui, |ui| {
+            egui_extras::TableBuilder::new(ui)
+                .striped(true)
+                .resizable(true)
+                .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                .columns(
+                    egui_extras::Column::auto().at_least(100.0),
+                    column_names.len(),
+                )
+                .header(20.0, |mut header| {
+                    for name in &column_names {
+                        header.col(|ui| {
+                            ui.strong(name.to_string());
+                        });
                     }
-                    ui.end_row();
-                }
-            });
+                })
+                .body(|body| {
+                    body.rows(22.0, height, |mut row| {
+                        let row_idx = row.index();
+
+                        for (i, column_name) in column_names.iter().enumerate() {
+                            row.col(|ui| {
+                                if let Ok(column) = df.column(column_name) {
+                                    let value = column.get(row_idx).unwrap_or(AnyValue::Null);
+                                    ui.colored_label(COLORS[i % 8], format!("{}", value));
+                                }
+                            });
+                        }
+                    });
+                });
         });
     }
 }
