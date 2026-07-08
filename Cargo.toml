@@ -8,6 +8,7 @@ chrono = "0.4"
 eframe = "0.35.0"
 egui = "0.35.0"
 egui_extras = "0.35.0"
+ico = "0.5.0"
 polars = {version="0.44", features = ["lazy", "csv", "strings", "temporal", "regex"] }
 
 [build-dependencies]
