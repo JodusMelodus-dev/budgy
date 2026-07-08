@@ -1,6 +1,5 @@
 mod app;
-pub mod help;
-pub mod icon;
+mod icon;
 
 use std::env;
 

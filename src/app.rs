@@ -1,3 +1,5 @@
+mod help;
+
 use std::path::{Path, PathBuf};
 
 use egui::{Color32, ViewportCommand};
@@ -13,7 +15,7 @@ use polars::{
 };
 use rfd::FileDialog;
 
-use crate::help::{generate_undefined_categories, load_budget, load_lookup, load_statement};
+use help::{generate_undefined_categories, load_budget, load_lookup, load_statement};
 
 pub struct Budgy {
     username: String,
