@@ -11,7 +11,9 @@ use polars::{frame::DataFrame, lazy::frame::LazyFrame};
 use rfd::FileDialog;
 
 use crate::app::{
-    config::Config, help::{load_budget, load_lookup}, tabs::Tabs,
+    config::Config,
+    help::{load_budget, load_lookup},
+    tabs::Tabs,
 };
 
 pub struct Budgy {
@@ -23,7 +25,6 @@ pub struct Budgy {
     statement_df: Option<DataFrame>,
     statement_lf: Option<LazyFrame>,
 
-    lookup_df: Option<DataFrame>,
     lookup_lf: Option<LazyFrame>,
 
     current_tab: Tabs,
@@ -43,7 +44,6 @@ impl Budgy {
             statement_df: None,
             statement_lf: None,
 
-            lookup_df: None,
             lookup_lf: load_lookup(),
 
             current_tab: Tabs::Statement,
@@ -54,36 +54,38 @@ impl Budgy {
 
 impl eframe::App for Budgy {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        egui::MenuBar::new().ui(ui, |ui| {
-            ui.menu_button("File", |ui| {
-                if ui.button("Open File...").clicked() {
-                    self.config.statement_path = FileDialog::new()
-                        .add_filter("CSV Files", &["csv"])
-                        .pick_file();
-                }
+        egui::CentralPanel::default_margins().show(ui, |ui| {
+            egui::MenuBar::new().ui(ui, |ui| {
+                ui.menu_button("File", |ui| {
+                    if ui.button("Open File...").clicked() {
+                        self.config.statement_path = FileDialog::new()
+                            .add_filter("CSV Files", &["csv"])
+                            .pick_file();
+                    }
 
-                ui.separator();
+                    ui.separator();
 
-                if ui.button("Exit").clicked() {
-                    ui.send_viewport_cmd(ViewportCommand::Close);
-                }
+                    if ui.button("Exit").clicked() {
+                        ui.send_viewport_cmd(ViewportCommand::Close);
+                    }
+                });
             });
+
+            ui.separator();
+
+            ui.horizontal(|ui| {
+                ui.selectable_value(&mut self.current_tab, Tabs::Statement, "Statement");
+                ui.selectable_value(&mut self.current_tab, Tabs::BudgetSummary, "Summary");
+                ui.selectable_value(&mut self.current_tab, Tabs::Budget, "Budget");
+            });
+            ui.separator();
+
+            match self.current_tab {
+                Tabs::Statement => self.display_statements_tab(ui),
+                Tabs::BudgetSummary => self.display_budget_summary_tab(ui),
+                Tabs::Budget => self.display_budget_tab(ui),
+            }
         });
-
-        ui.separator();
-
-        ui.horizontal(|ui| {
-            ui.selectable_value(&mut self.current_tab, Tabs::Statement, "Statement");
-            ui.selectable_value(&mut self.current_tab, Tabs::BudgetSummary, "Summary");
-            ui.selectable_value(&mut self.current_tab, Tabs::Budget, "Budget");
-        });
-        ui.separator();
-
-        match self.current_tab {
-            Tabs::Statement => self.display_statements_tab(ui),
-            Tabs::BudgetSummary => self.display_budget_summary_tab(ui),
-            Tabs::Budget => self.display_budget_tab(ui),
-        }
     }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {

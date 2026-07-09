@@ -13,7 +13,7 @@ impl Budgy {
                 .resizable(true)
                 .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
                 .columns(
-                    egui_extras::Column::auto().at_least(100.0),
+                    egui_extras::Column::auto(),
                     column_names.len(),
                 )
                 .header(20.0, |mut header| {
