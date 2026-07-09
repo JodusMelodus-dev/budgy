@@ -4,9 +4,7 @@ use std::{
 };
 
 use polars::{
-    chunked_array::ops::SortMultipleOptions,
     datatypes::{DataType, PlSmallStr},
-    error::PolarsResult,
     frame::{DataFrame, column::Column},
     io::{SerWriter, csv::write::CsvWriter},
     lazy::{
@@ -153,15 +151,4 @@ pub fn load_budget() -> Option<LazyFrame> {
 
         Some(filtered_budget)
     }
-}
-
-pub fn generate_undefined_categories(statement: LazyFrame) -> PolarsResult<DataFrame> {
-    statement
-        .filter(col("New Category").is_null())
-        .select([col("Description").unique()])
-        .sort(
-            ["Description"],
-            SortMultipleOptions::new().with_order_descending(false),
-        )
-        .collect()
 }
