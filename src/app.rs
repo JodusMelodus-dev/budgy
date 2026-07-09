@@ -7,16 +7,24 @@ use std::path::PathBuf;
 
 use eframe::APP_KEY;
 use egui::ViewportCommand;
-use polars::frame::DataFrame;
+use polars::{frame::DataFrame, lazy::frame::LazyFrame};
 use rfd::FileDialog;
 
-use crate::app::{config::Config, tabs::Tabs};
+use crate::app::{
+    config::Config, help::{load_budget, load_lookup}, tabs::Tabs,
+};
 
 pub struct Budgy {
     budget_summary: Option<DataFrame>,
-    budget: Option<DataFrame>,
-    statement: Option<DataFrame>,
-    lookup: Option<DataFrame>,
+
+    budget_df: Option<DataFrame>,
+    budget_lf: Option<LazyFrame>,
+
+    statement_df: Option<DataFrame>,
+    statement_lf: Option<LazyFrame>,
+
+    lookup_df: Option<DataFrame>,
+    lookup_lf: Option<LazyFrame>,
 
     current_tab: Tabs,
     config: Config,
@@ -28,9 +36,15 @@ impl Budgy {
 
         Self {
             budget_summary: None,
-            budget: None,
-            statement: None,
-            lookup: None,
+
+            budget_df: None,
+            budget_lf: load_budget(),
+
+            statement_df: None,
+            statement_lf: None,
+
+            lookup_df: None,
+            lookup_lf: load_lookup(),
 
             current_tab: Tabs::Statement,
             config,
