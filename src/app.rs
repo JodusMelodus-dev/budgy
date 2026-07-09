@@ -33,7 +33,8 @@ pub struct Budgy {
 
 impl Budgy {
     pub fn new(mut config: Config, statement_path: Option<String>) -> Self {
-        config.statement_path = statement_path.map(|p| PathBuf::from(p));
+        config.statement_path =
+            statement_path.map_or(config.statement_path, |p| Some(PathBuf::from(p)));
 
         Self {
             budget_summary: None,
@@ -61,7 +62,26 @@ impl eframe::App for Budgy {
                         self.config.statement_path = FileDialog::new()
                             .add_filter("CSV Files", &["csv"])
                             .pick_file();
+
+                        if let Some(path) = &self.config.statement_path {
+                            if !self.config.recents.contains(path) {
+                                self.config.recents.insert(0, path.to_path_buf());
+                            }
+                        }
                     }
+
+                    ui.menu_button("Open Recent", |ui| {
+                        ui.vertical(|ui| {
+                            for path in &self.config.recents {
+                                if ui
+                                    .button(path.file_name().unwrap().to_str().unwrap_or("NULL"))
+                                    .clicked()
+                                {
+                                    self.config.statement_path = Some(path.to_path_buf());
+                                }
+                            }
+                        });
+                    });
 
                     ui.separator();
 
