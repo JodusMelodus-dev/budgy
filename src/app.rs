@@ -3,12 +3,16 @@ mod help;
 mod tabs;
 mod ui;
 
-use std::path::PathBuf;
+use std::{fs::File, path::PathBuf};
 
 use eframe::APP_KEY;
 use egui::ViewportCommand;
-use polars::{frame::DataFrame, lazy::frame::LazyFrame};
-use rfd::FileDialog;
+use polars::{
+    frame::DataFrame,
+    io::{SerWriter, csv::write::CsvWriter},
+    lazy::frame::LazyFrame,
+};
+use rfd::{FileDialog, MessageButtons, MessageDialog, MessageLevel};
 
 use crate::app::{
     config::Config,
@@ -58,7 +62,7 @@ impl eframe::App for Budgy {
         egui::CentralPanel::default_margins().show(ui, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
                 ui.menu_button("File", |ui| {
-                    if ui.button("Open File...").clicked() {
+                    if ui.button("Import CSV...").clicked() {
                         self.config.statement_path = FileDialog::new()
                             .add_filter("CSV Files", &["csv"])
                             .pick_file();
@@ -67,6 +71,32 @@ impl eframe::App for Budgy {
                             if !self.config.recents.contains(path) {
                                 self.config.recents.insert(0, path.to_path_buf());
                             }
+                        }
+                    }
+
+                    if ui.button("Export CSV...").clicked() {
+                        let path = FileDialog::new()
+                            .set_file_name("budget summary.csv")
+                            .add_filter("CSV Files", &["csv"])
+                            .save_file()
+                            .expect("Failed to get save path");
+
+                        let file = File::create(&path).expect("Failed to create file");
+                        if let Some(mut budget_summary_df) = self.budget_summary.clone() {
+                            CsvWriter::new(file)
+                                .include_header(true)
+                                .with_separator(b',')
+                                .finish(&mut budget_summary_df)
+                                .expect("Failed to export file");
+
+                            MessageDialog::new()
+                                .set_level(MessageLevel::Info)
+                                .set_description(format!(
+                                    "Successfully exported budget summary to: {}",
+                                    path.to_str().unwrap()
+                                ))
+                                .set_buttons(MessageButtons::Ok)
+                                .show();
                         }
                     }
 
