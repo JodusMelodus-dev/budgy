@@ -32,7 +32,6 @@ pub struct Budgy {
     lookup_lf: Option<LazyFrame>,
 
     current_tab: Tabs,
-    tool_bar_expanded: bool,
 
     config: Config,
 }
@@ -54,7 +53,6 @@ impl Budgy {
             lookup_lf: load_lookup(),
 
             current_tab: Tabs::Statement,
-            tool_bar_expanded: true,
 
             config,
         }
