@@ -131,7 +131,7 @@ impl eframe::App for Budgy {
             ui.separator();
 
             match self.current_tab {
-                Tabs::Statement => self.display_statements_tab(ui),
+                Tabs::Statement => self.display_statement_tab(ui),
                 Tabs::BudgetSummary => self.display_budget_summary_tab(ui),
                 Tabs::Budget => self.display_budget_tab(ui),
             }
