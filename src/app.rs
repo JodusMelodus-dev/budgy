@@ -6,7 +6,7 @@ mod ui;
 use std::{fs::File, path::PathBuf};
 
 use eframe::APP_KEY;
-use egui::ViewportCommand;
+use egui::{Color32, Frame, ViewportCommand};
 use polars::{
     frame::DataFrame,
     io::{SerWriter, csv::write::CsvWriter},
@@ -32,6 +32,8 @@ pub struct Budgy {
     lookup_lf: Option<LazyFrame>,
 
     current_tab: Tabs,
+    tool_bar_expanded: bool,
+
     config: Config,
 }
 
@@ -52,6 +54,8 @@ impl Budgy {
             lookup_lf: load_lookup(),
 
             current_tab: Tabs::Statement,
+            tool_bar_expanded: true,
+
             config,
         }
     }
@@ -59,83 +63,97 @@ impl Budgy {
 
 impl eframe::App for Budgy {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default_margins().show(ui, |ui| {
-            egui::MenuBar::new().ui(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Import CSV...").clicked() {
-                        self.config.statement_path = FileDialog::new()
-                            .add_filter("CSV Files", &["csv"])
-                            .pick_file();
+        egui::Panel::top("Menu")
+            .frame(Frame::default().inner_margin(5.0))
+            .show_separator_line(false)
+            .show(ui, |ui| {
+                egui::MenuBar::new().ui(ui, |ui| {
+                    ui.menu_button("File", |ui| {
+                        if ui.button("Import CSV").clicked() {
+                            self.config.statement_path = FileDialog::new()
+                                .add_filter("CSV Files", &["csv"])
+                                .pick_file();
 
-                        if let Some(path) = &self.config.statement_path {
-                            if !self.config.recents.contains(path) {
-                                self.config.recents.insert(0, path.to_path_buf());
-                            }
-                        }
-                    }
-
-                    if ui.button("Export CSV...").clicked() {
-                        let path = FileDialog::new()
-                            .set_file_name("budget summary.csv")
-                            .add_filter("CSV Files", &["csv"])
-                            .save_file()
-                            .expect("Failed to get save path");
-
-                        let file = File::create(&path).expect("Failed to create file");
-                        if let Some(mut budget_summary_df) = self.budget_summary.clone() {
-                            CsvWriter::new(file)
-                                .include_header(true)
-                                .with_separator(b',')
-                                .finish(&mut budget_summary_df)
-                                .expect("Failed to export file");
-
-                            MessageDialog::new()
-                                .set_level(MessageLevel::Info)
-                                .set_description(format!(
-                                    "Successfully exported budget summary to: {}",
-                                    path.to_str().unwrap()
-                                ))
-                                .set_buttons(MessageButtons::Ok)
-                                .show();
-                        }
-                    }
-
-                    ui.menu_button("Open Recent", |ui| {
-                        ui.vertical(|ui| {
-                            for path in &self.config.recents {
-                                if ui
-                                    .button(path.file_name().unwrap().to_str().unwrap_or("NULL"))
-                                    .clicked()
-                                {
-                                    self.config.statement_path = Some(path.to_path_buf());
+                            if let Some(path) = &self.config.statement_path {
+                                if !self.config.recents.contains(path) {
+                                    self.config.recents.insert(0, path.to_path_buf());
                                 }
                             }
+                        }
+
+                        if ui.button("Export CSV").clicked() {
+                            let path = FileDialog::new()
+                                .set_file_name("budget summary.csv")
+                                .add_filter("CSV Files", &["csv"])
+                                .save_file()
+                                .expect("Failed to get save path");
+
+                            let file = File::create(&path).expect("Failed to create file");
+                            if let Some(mut budget_summary_df) = self.budget_summary.clone() {
+                                CsvWriter::new(file)
+                                    .include_header(true)
+                                    .with_separator(b',')
+                                    .finish(&mut budget_summary_df)
+                                    .expect("Failed to export file");
+
+                                MessageDialog::new()
+                                    .set_level(MessageLevel::Info)
+                                    .set_description(format!(
+                                        "Successfully exported budget summary to: {}",
+                                        path.to_str().unwrap()
+                                    ))
+                                    .set_buttons(MessageButtons::Ok)
+                                    .show();
+                            }
+                        }
+
+                        ui.menu_button("Open Recent", |ui| {
+                            ui.vertical(|ui| {
+                                for path in &self.config.recents {
+                                    if ui
+                                        .button(
+                                            path.file_name().unwrap().to_str().unwrap_or("NULL"),
+                                        )
+                                        .clicked()
+                                    {
+                                        self.config.statement_path = Some(path.to_path_buf());
+                                    }
+                                }
+                            });
                         });
+
+                        ui.separator();
+
+                        if ui.button("Exit").clicked() {
+                            ui.send_viewport_cmd(ViewportCommand::Close);
+                        }
                     });
+                });
 
-                    ui.separator();
+                ui.separator();
 
-                    if ui.button("Exit").clicked() {
-                        ui.send_viewport_cmd(ViewportCommand::Close);
-                    }
+                ui.horizontal(|ui| {
+                    ui.selectable_value(&mut self.current_tab, Tabs::Statement, "Statement");
+                    ui.selectable_value(&mut self.current_tab, Tabs::BudgetSummary, "Summary");
+                    ui.selectable_value(&mut self.current_tab, Tabs::Budget, "Budget");
                 });
             });
 
-            ui.separator();
-
-            ui.horizontal(|ui| {
-                ui.selectable_value(&mut self.current_tab, Tabs::Statement, "Statement");
-                ui.selectable_value(&mut self.current_tab, Tabs::BudgetSummary, "Summary");
-                ui.selectable_value(&mut self.current_tab, Tabs::Budget, "Budget");
+        egui::CentralPanel::default()
+            .frame(
+                Frame::default()
+                    .fill(Color32::from_rgb(32, 32, 32))
+                    .corner_radius(5.0)
+                    .outer_margin(5.0)
+                    .inner_margin(10.0),
+            )
+            .show(ui, |ui| {
+                match self.current_tab {
+                    Tabs::Statement => self.display_statement_tab(ui),
+                    Tabs::BudgetSummary => self.display_budget_summary_tab(ui),
+                    Tabs::Budget => self.display_budget_tab(ui),
+                };
             });
-            ui.separator();
-
-            match self.current_tab {
-                Tabs::Statement => self.display_statement_tab(ui),
-                Tabs::BudgetSummary => self.display_budget_summary_tab(ui),
-                Tabs::Budget => self.display_budget_tab(ui),
-            }
-        });
     }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
