@@ -3,7 +3,7 @@ mod help;
 mod tabs;
 mod ui;
 
-use std::{fs::File, path::PathBuf};
+use std::{collections::HashMap, fs::File, path::PathBuf};
 
 use eframe::APP_KEY;
 use egui::{Color32, Frame, ViewportCommand};
@@ -31,6 +31,8 @@ pub struct Budgy {
 
     lookup_lf: Option<LazyFrame>,
 
+    statement_deltas: HashMap<usize, String>,
+
     current_tab: Tabs,
     config: Config,
 }
@@ -50,6 +52,8 @@ impl Budgy {
             statement_lf: None,
 
             lookup_lf: load_lookup(),
+
+            statement_deltas: HashMap::new(),
 
             current_tab: Tabs::Statement,
             config,
