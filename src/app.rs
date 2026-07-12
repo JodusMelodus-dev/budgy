@@ -31,7 +31,7 @@ pub struct Budgy {
 
     lookup_lf: Option<LazyFrame>,
 
-    statement_deltas: HashMap<usize, String>,
+    statement_deltas: HashMap<i64, String>,
 
     current_tab: Tabs,
     config: Config,
@@ -136,6 +136,9 @@ impl eframe::App for Budgy {
                     ui.selectable_value(&mut self.current_tab, Tabs::Statement, "Statement");
                     ui.selectable_value(&mut self.current_tab, Tabs::BudgetSummary, "Summary");
                     ui.selectable_value(&mut self.current_tab, Tabs::Budget, "Budget");
+                    if ui.button("Save").clicked() {
+                        self.save_updated_categories();
+                    }
                 });
             });
 

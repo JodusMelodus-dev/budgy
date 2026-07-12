@@ -1,5 +1,15 @@
+use std::fs::File;
+
 use help::load_statement;
-use polars::datatypes::AnyValue;
+use polars::{
+    datatypes::AnyValue,
+    frame::{DataFrame, column::Column},
+    io::{SerWriter, csv::write::CsvWriter},
+    lazy::{
+        dsl::{col, when},
+        frame::IntoLazy,
+    },
+};
 
 use crate::app::{Budgy, help};
 
@@ -46,7 +56,7 @@ impl Budgy {
                                         if *column_name == "Category" {
                                             let current_value = self
                                                 .statement_deltas
-                                                .get(&row_idx)
+                                                .get(&(row_idx as i64))
                                                 .cloned()
                                                 .unwrap_or_else(|| {
                                                     if let AnyValue::String(v) = value {
@@ -59,8 +69,10 @@ impl Budgy {
                                             ui.menu_button(current_value, |ui| {
                                                 for category in CATEGORIES {
                                                     if ui.button(category).clicked() {
-                                                        self.statement_deltas
-                                                            .insert(row_idx, category.to_string());
+                                                        self.statement_deltas.insert(
+                                                            row_idx as i64,
+                                                            category.to_string(),
+                                                        );
                                                     }
                                                 }
                                             });
@@ -82,6 +94,45 @@ impl Budgy {
             self.statement_lf = load_statement(path);
         } else {
             ui.heading("Open a statement to get started");
+        }
+    }
+
+    pub fn save_updated_categories(&mut self) {
+        let rows = self.statement_deltas.keys().cloned().collect::<Vec<i64>>();
+        let categories = self
+            .statement_deltas
+            .values()
+            .cloned()
+            .collect::<Vec<String>>();
+
+        let row_series = Column::new("Nr".into(), rows);
+        let category_series = Column::new("User Picked Category".into(), categories);
+
+        let delta_table = DataFrame::new(vec![row_series, category_series])
+            .unwrap()
+            .lazy();
+
+        if let Some(statement) = self.statement_lf.clone() {
+            let mut updated = statement
+                .left_join(delta_table, col("Nr"), col("Nr"))
+                .with_column(
+                    when(col("User Picked Category").is_not_null())
+                        .then(col("User Picked Category"))
+                        .otherwise(col("Category"))
+                        .alias("Category"),
+                )
+                .drop(["User Picked Category"])
+                .collect()
+                .unwrap();
+
+            if let Some(path) = &self.config.statement_path {
+                let file = File::create(path).unwrap();
+                CsvWriter::new(file)
+                    .include_header(true)
+                    .with_separator(b',')
+                    .finish(&mut updated)
+                    .unwrap();
+            }
         }
     }
 }
