@@ -1,3 +1,4 @@
+use egui::{Color32, Frame};
 use polars::{datatypes::AnyValue, frame::DataFrame};
 
 use crate::app::Budgy;
@@ -7,36 +8,43 @@ impl Budgy {
         let height = dataframe.height();
         let column_names = dataframe.get_column_names();
 
-        egui::ScrollArea::horizontal().show(ui, |ui| {
-            egui_extras::TableBuilder::new(ui)
-                .striped(true)
-                .resizable(true)
-                .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                .columns(
-                    egui_extras::Column::auto(),
-                    column_names.len(),
-                )
-                .header(20.0, |mut header| {
-                    for name in &column_names {
-                        header.col(|ui| {
-                            ui.strong(name.to_string());
-                        });
-                    }
-                })
-                .body(|body| {
-                    body.rows(22.0, height, |mut row| {
-                        let row_idx = row.index();
+        egui::CentralPanel::default()
+            .frame(
+                Frame::default()
+                    .fill(Color32::from_rgb(32, 32, 32))
+                    .corner_radius(5.0)
+                    .inner_margin(10.0),
+            )
+            .show(ui, |ui| {
+                egui::ScrollArea::horizontal().show(ui, |ui| {
+                    egui_extras::TableBuilder::new(ui)
+                        .striped(true)
+                        .resizable(true)
+                        .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                        .columns(egui_extras::Column::auto(), column_names.len())
+                        .header(20.0, |mut header| {
+                            for name in &column_names {
+                                header.col(|ui| {
+                                    ui.strong(name.to_string());
+                                });
+                            }
+                        })
+                        .body(|body| {
+                            body.rows(22.0, height, |mut row| {
+                                let row_idx = row.index();
 
-                        for column_name in &column_names {
-                            row.col(|ui| {
-                                if let Ok(column) = dataframe.column(column_name) {
-                                    let value = column.get(row_idx).unwrap_or(AnyValue::Null);
-                                    ui.label(format!("{}", value));
+                                for column_name in &column_names {
+                                    row.col(|ui| {
+                                        if let Ok(column) = dataframe.column(column_name) {
+                                            let value =
+                                                column.get(row_idx).unwrap_or(AnyValue::Null);
+                                            ui.label(format!("{}", value));
+                                        }
+                                    });
                                 }
                             });
-                        }
-                    });
+                        });
                 });
-        });
+            });
     }
 }
