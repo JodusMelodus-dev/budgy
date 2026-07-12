@@ -39,9 +39,7 @@ pub fn load_lookup() -> Option<LazyFrame> {
             .finish()
             .expect("Failed to load lookup")
             .with_columns([dtype_col(&DataType::String).str().strip_chars(lit(""))]);
-        Some(
-            lookup, // .with_column(lit(1).alias("Join Key")),
-        )
+        Some(lookup.with_column(lit(1).alias("Join Key")))
     }
 }
 
