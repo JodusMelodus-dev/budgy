@@ -14,66 +14,60 @@ impl Budgy {
         if let Some(df) = &self.budget_summary {
             self.display_dataframe(ui, df);
         } else {
-            if let Some(statement) = self.statement_lf.clone() {
+            if let Some(mut statement) = self.statement_lf.clone() {
                 if let Some(budget) = self.budget_lf.clone() {
-                    self.statement_lf = Some(
-                        statement
-                            .filter(col("Category").is_not_null())
-                            .left_join(budget, col("Category"), col("Category"))
-                            .filter(
-                                col("Posting Date")
-                                    .gt_eq(col("Start Date"))
-                                    .and(col("Posting Date").lt_eq("End Date")),
-                            ),
-                    );
-
-                    if let Some(statement) = self.statement_lf.clone() {
-                        let result = statement
-                            .group_by([col("Category"), col("Start Date"), col("End Date")])
-                            .agg([
-                                col("Money In").fill_null(lit(0.0)).sum().alias("Total In"),
-                                col("Money Out")
-                                    .fill_null(lit(0.0))
-                                    .sum()
-                                    .alias("Total Out"),
-                                col("Fee").fill_null(lit(0.0)).sum().alias("Total Fees"),
-                                (col("Money In").fill_null(lit(0.0)).sum()
-                                    + col("Money Out").fill_null(lit(0.0)).sum()
-                                    + col("Fee").fill_null(lit(0.0)).sum())
-                                .alias("Net Total"),
-                                (col("Budget Amount") * col("Month Difference"))
-                                    .max()
-                                    .alias("Budgetted Amount"),
-                                ((col("Money In").fill_null(lit(0.0)).sum()
-                                    + col("Money Out").fill_null(lit(0.0)).sum()
-                                    + col("Fee").fill_null(lit(0.0)).sum())
-                                    - (col("Budget Amount") * col("Month Difference")).max())
-                                .alias("NET BUDGET"),
-                            ])
-                            .sort(
-                                ["Start Date", "Category"],
-                                SortMultipleOptions::new().with_order_descending(false),
-                            );
-
-                        let final_result = result
-                            .group_by(["Category"])
-                            .agg([(col("NET BUDGET").sum()).alias("Budget Balance")])
-                            .sort(
-                                ["Budget Balance"],
-                                SortMultipleOptions::new().with_order_descending(false),
-                            );
-
-                        self.budget_summary = Some(
-                            final_result
-                                .collect()
-                                .expect("Failed to generate budget summary"),
+                    statement = statement
+                        .filter(col("Category").is_not_null())
+                        .left_join(budget, col("Category"), col("Category"))
+                        .filter(
+                            col("Posting Date")
+                                .gt_eq(col("Start Date"))
+                                .and(col("Posting Date").lt_eq("End Date")),
                         );
-                    }
-                } else {
-                    ui.heading("Missing budget");
+
+                    let result = statement
+                        .group_by([col("Category"), col("Start Date"), col("End Date")])
+                        .agg([
+                            col("Money In").fill_null(lit(0.0)).sum().alias("Total In"),
+                            col("Money Out")
+                                .fill_null(lit(0.0))
+                                .sum()
+                                .alias("Total Out"),
+                            col("Fee").fill_null(lit(0.0)).sum().alias("Total Fees"),
+                            (col("Money In").fill_null(lit(0.0)).sum()
+                                + col("Money Out").fill_null(lit(0.0)).sum()
+                                + col("Fee").fill_null(lit(0.0)).sum())
+                            .alias("Net Total"),
+                            (col("Budget Amount") * col("Month Difference"))
+                                .max()
+                                .alias("Budgetted Amount"),
+                            ((col("Money In").fill_null(lit(0.0)).sum()
+                                + col("Money Out").fill_null(lit(0.0)).sum()
+                                + col("Fee").fill_null(lit(0.0)).sum())
+                                - (col("Budget Amount") * col("Month Difference")).max())
+                            .alias("NET BUDGET"),
+                        ])
+                        .sort(
+                            ["Start Date", "Category"],
+                            SortMultipleOptions::new().with_order_descending(false),
+                        );
+
+                    let final_result = result
+                        .group_by(["Category"])
+                        .agg([(col("NET BUDGET").sum()).alias("Budget Balance")])
+                        .sort(
+                            ["Budget Balance"],
+                            SortMultipleOptions::new().with_order_descending(false),
+                        );
+
+                    self.budget_summary = Some(
+                        final_result
+                            .collect()
+                            .expect("Failed to generate budget summary"),
+                    );
                 }
             } else {
-                ui.heading("Missing lookup");
+                ui.heading("Missing budget");
             }
         }
     }

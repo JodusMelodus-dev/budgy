@@ -33,6 +33,7 @@ pub fn load_budget() -> Option<LazyFrame> {
             Column::new_empty("Start Date".into(), &DataType::Date),
             Column::new_empty("End Date".into(), &DataType::Date),
             Column::new_empty("Budget Amount".into(), &DataType::Float32),
+            Column::new_empty("Color".into(), &DataType::String),
         ])
         .expect("Failed to create blank budget");
 
@@ -50,18 +51,10 @@ pub fn load_budget() -> Option<LazyFrame> {
             .with_try_parse_dates(true)
             .finish()
             .expect("Failed to load budget");
-        let filtered_budget = budget
-            .with_column(
-                (col("End Date").dt().month() - col("Start Date").dt().month() + lit(1))
-                    .alias("Month Difference"),
-            )
-            .select([
-                col("Category"),
-                col("Budget Amount"),
-                col("Start Date"),
-                col("End Date"),
-                col("Month Difference"),
-            ]);
+        let filtered_budget = budget.with_column(
+            (col("End Date").dt().month() - col("Start Date").dt().month() + lit(1))
+                .alias("Month Difference"),
+        );
 
         Some(filtered_budget)
     }
