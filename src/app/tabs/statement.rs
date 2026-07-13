@@ -56,7 +56,7 @@ impl Budgy {
                                         if *column_name == "Category" {
                                             let current_value = self
                                                 .statement_deltas
-                                                .get(&(row_idx as i64))
+                                                .get(&(row_idx as i64 + 1))
                                                 .cloned()
                                                 .unwrap_or_else(|| {
                                                     if let AnyValue::String(v) = value {
@@ -70,7 +70,7 @@ impl Budgy {
                                                 for category in CATEGORIES {
                                                     if ui.button(category).clicked() {
                                                         self.statement_deltas.insert(
-                                                            row_idx as i64,
+                                                            (row_idx + 1) as i64,
                                                             category.to_string(),
                                                         );
                                                     }
