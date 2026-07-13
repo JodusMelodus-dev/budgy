@@ -1,5 +1,6 @@
 use std::fs::File;
 
+use egui::{Color32, RichText};
 use help::load_statement;
 use polars::{
     datatypes::AnyValue,
@@ -13,23 +14,22 @@ use polars::{
 
 use crate::app::{Budgy, help};
 
-const CATEGORIES: [&str; 9] = [
-    "Salary",
-    "Pocket Money",
-    "Mobile",
-    "Clothes",
-    "Personal Care",
-    "Goodwill",
-    "Fuel",
-    "Food",
-    "Bank",
-];
-
 impl Budgy {
     pub fn display_statement_tab(&mut self, ui: &mut egui::Ui) {
         if let Some(df) = &self.statement_df {
             let height = df.height();
             let column_names = df.get_column_names();
+            let categories = [
+                ("Salary", Color32::from_hex("#5B643E").unwrap()),
+                ("Pocket Money", Color32::from_hex("#314350").unwrap()),
+                ("Mobile", Color32::from_hex("#C89839").unwrap()),
+                ("Clothes", Color32::from_hex("#AB5E16").unwrap()),
+                ("Personal Care", Color32::from_hex("#7B533B").unwrap()),
+                ("Goodwill", Color32::from_hex("#792318").unwrap()),
+                ("Fuel", Color32::from_hex("#44724F").unwrap()),
+                ("Food", Color32::from_hex("#4B8299").unwrap()),
+                ("Bank", Color32::from_hex("#99BFDF").unwrap()),
+            ];
 
             egui::ScrollArea::horizontal().show(ui, |ui| {
                 egui_extras::TableBuilder::new(ui)
@@ -66,9 +66,19 @@ impl Budgy {
                                                     }
                                                 });
 
-                                            ui.menu_button(current_value, |ui| {
-                                                for category in CATEGORIES {
-                                                    if ui.button(category).clicked() {
+                                            let color = categories
+                                                .iter()
+                                                .find(|(k, _)| *k == current_value)
+                                                .unwrap_or(&("", Color32::DARK_GRAY))
+                                                .1;
+
+                                            let text = RichText::new(current_value).color(color);
+
+                                            ui.menu_button(text, |ui| {
+                                                for (category, color) in categories.clone() {
+                                                    let text = RichText::new(category).color(color);
+
+                                                    if ui.button(text).clicked() {
                                                         self.statement_deltas.insert(
                                                             (row_idx + 1) as i64,
                                                             category.to_string(),
