@@ -5,8 +5,9 @@ mod ui;
 
 use std::{collections::HashMap, fs::File, path::PathBuf};
 
+use chrono::NaiveDate;
 use eframe::APP_KEY;
-use egui::{Color32, Frame, ViewportCommand};
+use egui::{Color32, Frame, ViewportCommand, epaint::Hsva};
 use polars::{
     frame::DataFrame,
     io::{SerWriter, csv::write::CsvWriter},
@@ -26,6 +27,7 @@ pub struct Budgy {
     statement_lf: Option<LazyFrame>,
 
     statement_deltas: HashMap<i64, String>,
+    budget_deltas: Vec<(i64, String, NaiveDate, NaiveDate, f64, Hsva)>,
 
     current_tab: Tabs,
     config: Config,
@@ -46,6 +48,7 @@ impl Budgy {
             statement_lf: None,
 
             statement_deltas: HashMap::new(),
+            budget_deltas: Vec::new(),
 
             current_tab: Tabs::Statement,
             config,

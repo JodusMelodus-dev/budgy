@@ -116,7 +116,7 @@ impl Budgy {
         }
     }
 
-    pub fn save_updated_categories(&mut self) {
+    fn save_updated_categories(&mut self) {
         let rows = self.statement_deltas.keys().cloned().collect::<Vec<i64>>();
         let categories = self
             .statement_deltas

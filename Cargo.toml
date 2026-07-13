@@ -7,7 +7,7 @@ edition = "2024"
 chrono = "0.4"
 eframe = { version = "0.35.0", features = ["persistence"] }
 egui = "0.35.0"
-egui_extras = "0.35.0"
+egui_extras = { version = "0.35.0" }
 ico = "0.5.0"
 polars = { version = "0.44", features = ["lazy", "csv", "strings", "temporal", "regex"] }
 rfd = "0.17.2"
