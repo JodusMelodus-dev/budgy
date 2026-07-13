@@ -8,40 +8,10 @@ use polars::{
     frame::{DataFrame, column::Column},
     io::{SerWriter, csv::write::CsvWriter},
     lazy::{
-        dsl::{col, dtype_col, lit},
+        dsl::{col, lit},
         frame::{LazyCsvReader, LazyFileListReader, LazyFrame},
     },
 };
-
-pub fn load_lookup() -> Option<LazyFrame> {
-    let path = PathBuf::from("lookup.csv");
-
-    if !path.exists() {
-        let file = File::create(&path).expect("Failed to create 'lookup.csv'");
-
-        let mut blank_lookup = DataFrame::new(vec![
-            Column::new_empty("Mask".into(), &DataType::String),
-            Column::new_empty("New Category".into(), &DataType::String),
-        ])
-        .expect("Failed to create blank lookup");
-
-        CsvWriter::new(file)
-            .include_header(true)
-            .with_separator(b',')
-            .finish(&mut blank_lookup)
-            .expect("Failed to save blank lookup");
-
-        println!("Populate lookup.csv before running Budgy again.");
-        None
-    } else {
-        let lookup = LazyCsvReader::new(path)
-            .with_has_header(true)
-            .finish()
-            .expect("Failed to load lookup")
-            .with_columns([dtype_col(&DataType::String).str().strip_chars(lit(""))]);
-        Some(lookup.with_column(lit(1).alias("Join Key")))
-    }
-}
 
 pub fn load_statement(path: &Path) -> Option<LazyFrame> {
     let data = LazyCsvReader::new(path)
@@ -49,13 +19,7 @@ pub fn load_statement(path: &Path) -> Option<LazyFrame> {
         .with_try_parse_dates(true)
         .finish()
         .expect("Failed to load statement");
-
-    let filtered_data = data.filter(
-        col("Money In")
-            .is_not_null()
-            .or(col("Money Out").is_not_null().or(col("Fee").is_not_null())),
-    );
-    Some(filtered_data)
+    Some(data)
 }
 
 pub fn load_budget() -> Option<LazyFrame> {

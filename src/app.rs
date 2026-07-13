@@ -14,11 +14,7 @@ use polars::{
 };
 use rfd::{FileDialog, MessageButtons, MessageDialog, MessageLevel};
 
-use crate::app::{
-    config::Config,
-    help::{load_budget, load_lookup},
-    tabs::Tabs,
-};
+use crate::app::{config::Config, help::load_budget, tabs::Tabs};
 
 pub struct Budgy {
     budget_summary: Option<DataFrame>,
@@ -28,8 +24,6 @@ pub struct Budgy {
 
     statement_df: Option<DataFrame>,
     statement_lf: Option<LazyFrame>,
-
-    lookup_lf: Option<LazyFrame>,
 
     statement_deltas: HashMap<i64, String>,
 
@@ -50,8 +44,6 @@ impl Budgy {
 
             statement_df: None,
             statement_lf: None,
-
-            lookup_lf: load_lookup(),
 
             statement_deltas: HashMap::new(),
 
