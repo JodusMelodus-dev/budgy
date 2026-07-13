@@ -136,9 +136,6 @@ impl eframe::App for Budgy {
                     ui.selectable_value(&mut self.current_tab, Tabs::Statement, "Statement");
                     ui.selectable_value(&mut self.current_tab, Tabs::BudgetSummary, "Summary");
                     ui.selectable_value(&mut self.current_tab, Tabs::Budget, "Budget");
-                    if ui.button("Save").clicked() {
-                        self.save_updated_categories();
-                    }
                 });
             });
 

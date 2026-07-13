@@ -16,6 +16,14 @@ use crate::app::{Budgy, help};
 
 impl Budgy {
     pub fn display_statement_tab(&mut self, ui: &mut egui::Ui) {
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+            if ui.button("Save").clicked() {
+                self.save_updated_categories();
+            }
+        });
+
+        ui.separator();
+
         if let Some(df) = &self.statement_df {
             let height = df.height();
             let column_names = df.get_column_names();

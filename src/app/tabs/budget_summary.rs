@@ -9,6 +9,10 @@ use crate::app::Budgy;
 
 impl Budgy {
     pub fn display_budget_summary_tab(&mut self, ui: &mut egui::Ui) {
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |_ui| {});
+
+        ui.separator();
+
         if let Some(df) = &self.budget_summary {
             self.display_dataframe(ui, df);
         } else {
