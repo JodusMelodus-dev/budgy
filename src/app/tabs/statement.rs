@@ -45,54 +45,61 @@ impl Budgy {
                         body.rows(22.0, height, |mut row| {
                             let row_idx = row.index();
 
-                            for column_name in &column_names {
-                                row.col(|ui| {
-                                    if let Ok(column) = df.column(column_name) {
-                                        let value = column.get(row_idx).unwrap_or(AnyValue::Null);
+                            if let AnyValue::Int64(nr) =
+                                df.column(column_names[0]).unwrap().get(row_idx).unwrap()
+                            {
+                                for column_name in &column_names {
+                                    row.col(|ui| {
+                                        if let Ok(column) = df.column(column_name) {
+                                            let value =
+                                                column.get(row_idx).unwrap_or(AnyValue::Null);
 
-                                        if *column_name == "Category" {
-                                            let current_value = self
-                                                .statement_deltas
-                                                .get(&(row_idx as i64 + 1))
-                                                .cloned()
-                                                .unwrap_or_else(|| {
-                                                    if let AnyValue::String(v) = value {
-                                                        v.to_string()
-                                                    } else {
-                                                        "unknown".to_string()
+                                            if *column_name == "Category" {
+                                                let current_value = self
+                                                    .statement_deltas
+                                                    .get(&nr)
+                                                    .cloned()
+                                                    .unwrap_or_else(|| {
+                                                        if let AnyValue::String(v) = value {
+                                                            v.to_string()
+                                                        } else {
+                                                            "unknown".to_string()
+                                                        }
+                                                    });
+
+                                                let color = self
+                                                    .config
+                                                    .categories
+                                                    .iter()
+                                                    .find(|(k, _)| *k == current_value)
+                                                    .unwrap_or(&(
+                                                        "".to_string(),
+                                                        Color32::DARK_GRAY,
+                                                    ))
+                                                    .1;
+
+                                                let text =
+                                                    RichText::new(current_value).color(color);
+
+                                                ui.menu_button(text, |ui| {
+                                                    for (category, color) in
+                                                        self.config.categories.clone()
+                                                    {
+                                                        let text =
+                                                            RichText::new(&category).color(color);
+
+                                                        if ui.button(text).clicked() {
+                                                            self.statement_deltas
+                                                                .insert(nr, category.to_string());
+                                                        }
                                                     }
                                                 });
-
-                                            let color = self
-                                                .config
-                                                .categories
-                                                .iter()
-                                                .find(|(k, _)| *k == current_value)
-                                                .unwrap_or(&("".to_string(), Color32::DARK_GRAY))
-                                                .1;
-
-                                            let text = RichText::new(current_value).color(color);
-
-                                            ui.menu_button(text, |ui| {
-                                                for (category, color) in
-                                                    self.config.categories.clone()
-                                                {
-                                                    let text =
-                                                        RichText::new(&category).color(color);
-
-                                                    if ui.button(text).clicked() {
-                                                        self.statement_deltas.insert(
-                                                            (row_idx + 1) as i64,
-                                                            category.to_string(),
-                                                        );
-                                                    }
-                                                }
-                                            });
-                                        } else {
-                                            ui.label(format!("{}", value));
+                                            } else {
+                                                ui.label(format!("{}", value));
+                                            }
                                         }
-                                    }
-                                });
+                                    });
+                                }
                             }
                         });
                     });

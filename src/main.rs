@@ -9,9 +9,7 @@ use crate::{app::Budgy, icon::generate_icon_data};
 
 fn main() {
     unsafe {
-        env::set_var("POLARS_FMT_MAX_ROWS", "-1");
         env::set_var("POLARS_FMT_MAX_COLS", "-1");
-        env::set_var("POLARS_FMT_STR_LEN", "100");
     };
 
     let args = env::args().collect::<Vec<String>>();

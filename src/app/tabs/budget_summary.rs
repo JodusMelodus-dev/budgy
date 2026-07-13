@@ -17,7 +17,6 @@ impl Budgy {
             if let Some(mut statement) = self.statement_lf.clone() {
                 if let Some(budget) = self.budget_lf.clone() {
                     statement = statement
-                        .filter(col("Category").is_not_null())
                         .left_join(budget, col("Category"), col("Category"))
                         .filter(
                             col("Posting Date")
