@@ -1,7 +1,7 @@
 use std::{fs::File, path::PathBuf, str::FromStr};
 
-use chrono::NaiveDate;
-use egui::{Color32, epaint::Hsva};
+use chrono::{Local, NaiveDate};
+use egui::{Align, Color32, epaint::Hsva};
 use polars::{
     frame::{DataFrame, column::Column},
     io::{SerWriter, csv::write::CsvWriter},
@@ -11,10 +11,24 @@ use crate::app::{Budgy, help::load_budget};
 
 impl Budgy {
     pub fn display_budget_tab(&mut self, ui: &mut egui::Ui) {
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-            if ui.button("Save").clicked() {
-                self.save_updated_budget();
+        ui.horizontal(|ui| {
+            if ui.button("Add Row").clicked() {
+                self.budget_deltas.push((
+                    (self.budget_deltas.len() + 1) as i64,
+                    "".to_string(),
+                    Local::now().date_naive(),
+                    Local::now().date_naive(),
+                    0.0,
+                    Hsva::default(),
+                ));
+                self.scroll_budget_to_bottom = true;
             }
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                if ui.button("Save").clicked() {
+                    self.save_updated_budget();
+                }
+            });
         });
 
         ui.separator();
@@ -22,59 +36,69 @@ impl Budgy {
         if let Some(df) = &self.budget_df {
             let column_names = df.get_column_names();
 
-            egui::ScrollArea::horizontal().show(ui, |ui| {
-                egui_extras::TableBuilder::new(ui)
-                    .striped(true)
-                    .resizable(true)
-                    .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                    .columns(egui_extras::Column::auto(), column_names.len() - 1)
-                    .header(20.0, |mut header| {
-                        for name in &column_names[..column_names.len() - 1] {
-                            header.col(|ui| {
-                                ui.strong(name.to_string());
-                            });
-                        }
-                    })
-                    .body(|body| {
-                        if self.budget_deltas.len() > 0 {
-                            body.rows(22.0, self.budget_deltas.len() - 1, |mut row| {
-                                let row_idx = row.index();
+            egui::ScrollArea::horizontal()
+                .id_salt("budget")
+                .show(ui, |ui| {
+                    let mut table = egui_extras::TableBuilder::new(ui).striped(true);
 
-                                row.col(|ui| {
-                                    ui.label(format!("{}", self.budget_deltas[row_idx].0));
+                    if self.scroll_budget_to_bottom {
+                        table = table.scroll_to_row(self.budget_deltas.len(), Some(Align::BOTTOM));
+                        self.scroll_budget_to_bottom = false;
+                    }
+
+                    table
+                        .resizable(true)
+                        .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                        .columns(egui_extras::Column::auto(), column_names.len() - 1)
+                        .header(20.0, |mut header| {
+                            for name in &column_names[..column_names.len() - 1] {
+                                header.col(|ui| {
+                                    ui.strong(name.to_string());
                                 });
-                                row.col(|ui| {
-                                    let mut text = self.budget_deltas[row_idx].1.clone();
-                                    ui.text_edit_singleline(&mut text);
-                                    self.budget_deltas[row_idx].1 = text;
-                                });
-                                row.col(|ui| {
-                                    let mut text = self.budget_deltas[row_idx].2.to_string();
-                                    ui.text_edit_singleline(&mut text);
-                                    self.budget_deltas[row_idx].2 =
-                                        NaiveDate::from_str(&text).unwrap();
-                                });
-                                row.col(|ui| {
-                                    let mut text = self.budget_deltas[row_idx].3.to_string();
-                                    ui.text_edit_singleline(&mut text);
-                                    self.budget_deltas[row_idx].3 =
-                                        NaiveDate::from_str(&text).unwrap();
-                                });
-                                row.col(|ui| {
-                                    let mut text = self.budget_deltas[row_idx].4.to_string();
-                                    ui.text_edit_singleline(&mut text);
-                                    self.budget_deltas[row_idx].4 =
-                                        text.parse::<f64>().unwrap_or(0.0);
-                                });
-                                row.col(|ui| {
-                                    let color = Color32::from(self.budget_deltas[row_idx].5);
-                                    ui.color_edit_button_hsva(&mut self.budget_deltas[row_idx].5)
+                            }
+                        })
+                        .body(|body| {
+                            if self.budget_deltas.len() > 0 {
+                                body.rows(22.0, self.budget_deltas.len(), |mut row| {
+                                    let row_idx = row.index();
+
+                                    row.col(|ui| {
+                                        ui.label(format!("{}", self.budget_deltas[row_idx].0));
+                                    });
+                                    row.col(|ui| {
+                                        let mut text = self.budget_deltas[row_idx].1.clone();
+                                        ui.text_edit_singleline(&mut text);
+                                        self.budget_deltas[row_idx].1 = text;
+                                    });
+                                    row.col(|ui| {
+                                        let mut text = self.budget_deltas[row_idx].2.to_string();
+                                        ui.text_edit_singleline(&mut text);
+                                        self.budget_deltas[row_idx].2 =
+                                            NaiveDate::from_str(&text).unwrap();
+                                    });
+                                    row.col(|ui| {
+                                        let mut text = self.budget_deltas[row_idx].3.to_string();
+                                        ui.text_edit_singleline(&mut text);
+                                        self.budget_deltas[row_idx].3 =
+                                            NaiveDate::from_str(&text).unwrap();
+                                    });
+                                    row.col(|ui| {
+                                        let mut text = self.budget_deltas[row_idx].4.to_string();
+                                        ui.text_edit_singleline(&mut text);
+                                        self.budget_deltas[row_idx].4 =
+                                            text.parse::<f64>().unwrap_or(0.0);
+                                    });
+                                    row.col(|ui| {
+                                        let color = Color32::from(self.budget_deltas[row_idx].5);
+                                        ui.color_edit_button_hsva(
+                                            &mut self.budget_deltas[row_idx].5,
+                                        )
                                         .labelled_by(ui.label(color.to_hex()).id);
+                                    });
                                 });
-                            });
-                        }
-                    });
-            });
+                            }
+                        });
+                });
         } else if let Some(lf) = self.budget_lf.clone() {
             self.budget_df = Some(lf.collect().expect("Failed to collect budget lazy frame"));
 

@@ -28,6 +28,7 @@ pub struct Budgy {
 
     statement_deltas: HashMap<i64, String>,
     budget_deltas: Vec<(i64, String, NaiveDate, NaiveDate, f64, Hsva)>,
+    scroll_budget_to_bottom: bool,
 
     current_tab: Tabs,
     config: Config,
@@ -49,6 +50,7 @@ impl Budgy {
 
             statement_deltas: HashMap::new(),
             budget_deltas: Vec::new(),
+            scroll_budget_to_bottom: false,
 
             current_tab: Tabs::Statement,
             config,
