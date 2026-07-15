@@ -81,19 +81,26 @@ impl Budgy {
                                                 let text =
                                                     RichText::new(current_value).color(color);
 
-                                                ui.menu_button(text, |ui| {
-                                                    for (category, color) in
-                                                        self.config.categories.clone()
-                                                    {
-                                                        let text =
-                                                            RichText::new(&category).color(color);
+                                                let width = ui.available_width()
+                                                    - ui.spacing().item_spacing.x;
+                                                egui::ComboBox::from_label("")
+                                                    .width(width)
+                                                    .selected_text(text.clone())
+                                                    .show_ui(ui, |ui| {
+                                                        for (category, color) in
+                                                            &self.config.categories
+                                                        {
+                                                            let text = RichText::new(category)
+                                                                .color(*color);
 
-                                                        if ui.button(text).clicked() {
-                                                            self.statement_deltas
-                                                                .insert(nr, category.to_string());
+                                                            if ui.button(text).clicked() {
+                                                                self.statement_deltas.insert(
+                                                                    nr,
+                                                                    category.to_string(),
+                                                                );
+                                                            }
                                                         }
-                                                    }
-                                                });
+                                                    });
                                             } else {
                                                 ui.label(format!("{}", value));
                                             }
