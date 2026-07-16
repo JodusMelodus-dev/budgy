@@ -9,7 +9,7 @@ eframe = { version = "0.35.0", features = ["persistence"] }
 egui = "0.35.0"
 egui_extras = { version = "0.35.0", features = ["serde"] }
 ico = "0.5.0"
-polars = { version = "0.44", features = ["lazy", "csv", "strings", "temporal", "regex"] }
+polars = { version = "0.44", features = ["lazy", "csv", "strings", "temporal", "regex", "cross_join", "diagonal_concat"] }
 rfd = "0.17.2"
 serde = { version = "1.0", features = ["derive"] }
 
