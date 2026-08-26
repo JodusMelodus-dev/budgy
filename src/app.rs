@@ -1,19 +1,15 @@
 mod config;
 mod help;
+mod menu;
 mod tabs;
 mod ui;
 
-use std::{collections::HashMap, fs::File, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf};
 
 use chrono::NaiveDate;
 use eframe::APP_KEY;
 use egui::{Color32, Frame, ViewportCommand, epaint::Hsva};
-use polars::{
-    frame::DataFrame,
-    io::{SerWriter, csv::write::CsvWriter},
-    lazy::frame::LazyFrame,
-};
-use rfd::{FileDialog, MessageButtons, MessageDialog, MessageLevel};
+use polars::{frame::DataFrame, lazy::frame::LazyFrame};
 
 use crate::app::{config::Config, help::load_budget, tabs::Tabs};
 
@@ -67,56 +63,15 @@ impl eframe::App for Budgy {
                 egui::MenuBar::new().ui(ui, |ui| {
                     ui.menu_button("File", |ui| {
                         if ui.button("Import CSV").clicked() {
-                            self.config.statement_path = FileDialog::new()
-                                .add_filter("CSV Files", &["csv"])
-                                .pick_file();
-
-                            if let Some(path) = &self.config.statement_path {
-                                if !self.config.recents.contains(path) {
-                                    self.config.recents.insert(0, path.to_path_buf());
-                                }
-                            }
+                            self.import_csv();
                         }
 
                         if ui.button("Export CSV").clicked() {
-                            let path = FileDialog::new()
-                                .set_file_name("budget summary.csv")
-                                .add_filter("CSV Files", &["csv"])
-                                .save_file()
-                                .expect("Failed to get save path");
-
-                            let file = File::create(&path).expect("Failed to create file");
-                            if let Some(mut budget_summary_df) = self.budget_summary.clone() {
-                                CsvWriter::new(file)
-                                    .include_header(true)
-                                    .with_separator(b',')
-                                    .finish(&mut budget_summary_df)
-                                    .expect("Failed to export file");
-
-                                MessageDialog::new()
-                                    .set_level(MessageLevel::Info)
-                                    .set_description(format!(
-                                        "Successfully exported budget summary to: {}",
-                                        path.to_str().unwrap()
-                                    ))
-                                    .set_buttons(MessageButtons::Ok)
-                                    .show();
-                            }
+                            self.export_csv();
                         }
 
                         ui.menu_button("Open Recent", |ui| {
-                            ui.vertical(|ui| {
-                                for path in &self.config.recents {
-                                    if ui
-                                        .button(
-                                            path.file_name().unwrap().to_str().unwrap_or("NULL"),
-                                        )
-                                        .clicked()
-                                    {
-                                        self.config.statement_path = Some(path.to_path_buf());
-                                    }
-                                }
-                            });
+                            self.open_recent(ui);
                         });
 
                         ui.separator();

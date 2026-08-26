@@ -1,11 +1,9 @@
 mod app;
 mod icon;
 
-use std::env;
-
-use eframe::APP_KEY;
-
 use crate::{app::Budgy, icon::generate_icon_data};
+use eframe::APP_KEY;
+use std::env;
 
 fn main() {
     unsafe {
