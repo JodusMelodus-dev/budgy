@@ -29,6 +29,7 @@ pub fn load_budget() -> Option<LazyFrame> {
         let file = File::create(&path).expect("Failed to create 'budget.csv'");
 
         let mut blank_budget = DataFrame::new(vec![
+            Column::new_empty("B_Nr".into(), &DataType::Int64),
             Column::new_empty("Category".into(), &DataType::String),
             Column::new_empty("Start Date".into(), &DataType::Date),
             Column::new_empty("End Date".into(), &DataType::Date),
