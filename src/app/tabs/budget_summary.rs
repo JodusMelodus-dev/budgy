@@ -45,7 +45,7 @@ impl Budgy {
                             .alias("Net Total"),
                             (col("Budget Amount") * col("Month Difference"))
                                 .max()
-                                .alias("Budgetted Amount"),
+                                .alias("Budgeted Amount"),
                             ((col("Money In").fill_null(lit(0.0)).sum()
                                 + col("Money Out").fill_null(lit(0.0)).sum()
                                 + col("Fee").fill_null(lit(0.0)).sum())
