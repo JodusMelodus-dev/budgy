@@ -14,11 +14,18 @@ use polars::{
 };
 
 pub fn load_statement(path: &Path) -> Option<LazyFrame> {
-    let data = LazyCsvReader::new(path)
+    let mut data = LazyCsvReader::new(path)
         .with_has_header(true)
         .with_try_parse_dates(true)
         .finish()
         .expect("Failed to load statement");
+
+    data = data.filter(
+        col("Category")
+            .is_not_null()
+            .and(col("Parent Category").is_not_null()),
+    );
+
     Some(data)
 }
 

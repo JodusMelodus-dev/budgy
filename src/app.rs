@@ -4,7 +4,7 @@ mod menu;
 mod tabs;
 mod ui;
 
-use std::{collections::HashMap, path::PathBuf};
+use std::path::PathBuf;
 
 use chrono::NaiveDate;
 use eframe::APP_KEY;
@@ -22,7 +22,6 @@ pub struct Budgy {
     statement_df: Option<DataFrame>,
     statement_lf: Option<LazyFrame>,
 
-    statement_deltas: HashMap<i64, String>,
     budget_deltas: Vec<(i64, String, NaiveDate, NaiveDate, f64, Hsva)>,
     scroll_budget_to_bottom: bool,
 
@@ -44,7 +43,6 @@ impl Budgy {
             statement_df: None,
             statement_lf: None,
 
-            statement_deltas: HashMap::new(),
             budget_deltas: Vec::new(),
             scroll_budget_to_bottom: false,
 
