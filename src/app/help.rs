@@ -41,7 +41,6 @@ pub fn load_budget() -> Option<LazyFrame> {
             Column::new_empty("Start Date".into(), &DataType::Date),
             Column::new_empty("End Date".into(), &DataType::Date),
             Column::new_empty("Budget Amount".into(), &DataType::Float32),
-            Column::new_empty("Color".into(), &DataType::String),
         ])
         .expect("Failed to create blank budget");
 

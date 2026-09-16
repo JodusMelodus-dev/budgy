@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use chrono::NaiveDate;
 use eframe::APP_KEY;
-use egui::{Color32, Frame, ViewportCommand, epaint::Hsva};
+use egui::{Color32, Frame, ViewportCommand};
 use polars::{frame::DataFrame, lazy::frame::LazyFrame};
 
 use crate::app::{config::Config, help::load_budget, tabs::Tabs};
@@ -22,7 +22,7 @@ pub struct Budgy {
     statement_df: Option<DataFrame>,
     statement_lf: Option<LazyFrame>,
 
-    budget_deltas: Vec<(i64, String, NaiveDate, NaiveDate, f64, Hsva)>,
+    budget_deltas: Vec<(i64, String, NaiveDate, NaiveDate, f64)>,
     scroll_budget_to_bottom: bool,
 
     current_tab: Tabs,

@@ -1,7 +1,7 @@
 use std::{fs::File, path::PathBuf, str::FromStr};
 
 use chrono::{Local, NaiveDate};
-use egui::{Align, Color32, epaint::Hsva};
+use egui::Align;
 use polars::{
     frame::{DataFrame, column::Column},
     io::{SerWriter, csv::write::CsvWriter},
@@ -19,7 +19,6 @@ impl Budgy {
                     Local::now().date_naive(),
                     Local::now().date_naive(),
                     0.0,
-                    Hsva::default(),
                 ));
                 self.scroll_budget_to_bottom = true;
             }
@@ -88,13 +87,6 @@ impl Budgy {
                                         self.budget_deltas[row_idx].4 =
                                             text.parse::<f64>().unwrap_or(0.0);
                                     });
-                                    row.col(|ui| {
-                                        let color = Color32::from(self.budget_deltas[row_idx].5);
-                                        ui.color_edit_button_hsva(
-                                            &mut self.budget_deltas[row_idx].5,
-                                        )
-                                        .labelled_by(ui.label(color.to_hex()).id);
-                                    });
                                 });
                             }
                         });
@@ -108,7 +100,6 @@ impl Budgy {
                 let start_dates = df.column("Start Date").unwrap().date().unwrap();
                 let end_dates = df.column("End Date").unwrap().date().unwrap();
                 let budget_amounts = df.column("Budget Amount").unwrap().f64().unwrap();
-                let colors = df.column("Color").unwrap().str().unwrap();
 
                 for i in 0..df.height() {
                     let nr = nrs.get(i).unwrap_or(0);
@@ -118,19 +109,9 @@ impl Budgy {
                     let end_date =
                         NaiveDate::from_epoch_days(end_dates.get(i).unwrap_or(0)).unwrap();
                     let budget_amount = budget_amounts.get(i).unwrap_or(0.0);
-                    let color = Hsva::from(
-                        Color32::from_hex(colors.get(i).unwrap_or("#FFFFFF"))
-                            .unwrap_or(Color32::WHITE),
-                    );
 
-                    self.budget_deltas.push((
-                        nr,
-                        category,
-                        start_date,
-                        end_date,
-                        budget_amount,
-                        color,
-                    ));
+                    self.budget_deltas
+                        .push((nr, category, start_date, end_date, budget_amount));
                 }
             }
         } else {
@@ -144,17 +125,13 @@ impl Budgy {
         let mut start_dates = Vec::with_capacity(self.budget_deltas.len());
         let mut end_dates = Vec::with_capacity(self.budget_deltas.len());
         let mut budget_amounts = Vec::with_capacity(self.budget_deltas.len());
-        let mut colors = Vec::with_capacity(self.budget_deltas.len());
 
-        for (nr, category, start_date, end_date, budget_amount, color) in
-            self.budget_deltas.drain(..)
-        {
+        for (nr, category, start_date, end_date, budget_amount) in self.budget_deltas.drain(..) {
             nrs.push(nr);
             categories.push(category);
             start_dates.push(start_date);
             end_dates.push(end_date);
             budget_amounts.push(budget_amount);
-            colors.push(Color32::from(color).to_hex());
         }
 
         let mut table = DataFrame::new(vec![
@@ -163,7 +140,6 @@ impl Budgy {
             Column::new("Start Date".into(), start_dates),
             Column::new("End Date".into(), end_dates),
             Column::new("Budget Amount".into(), budget_amounts),
-            Column::new("Color".into(), colors),
         ])
         .unwrap();
 
