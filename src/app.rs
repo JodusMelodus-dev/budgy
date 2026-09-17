@@ -83,8 +83,8 @@ impl eframe::App for Budgy {
 
                 ui.horizontal(|ui| {
                     ui.selectable_value(&mut self.current_tab, Tabs::Statement, "Statement");
-                    ui.selectable_value(&mut self.current_tab, Tabs::BudgetSummary, "Summary");
                     ui.selectable_value(&mut self.current_tab, Tabs::Budget, "Budget");
+                    ui.selectable_value(&mut self.current_tab, Tabs::BudgetSummary, "Summary");
                 });
             });
 
