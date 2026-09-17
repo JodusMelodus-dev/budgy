@@ -6,7 +6,6 @@ mod ui;
 
 use std::path::PathBuf;
 
-use chrono::NaiveDate;
 use eframe::APP_KEY;
 use egui::{Color32, Frame, ViewportCommand};
 use polars::{frame::DataFrame, lazy::frame::LazyFrame};
@@ -22,7 +21,7 @@ pub struct Budgy {
     statement_df: Option<DataFrame>,
     statement_lf: Option<LazyFrame>,
 
-    budget_deltas: Vec<(i64, String, NaiveDate, NaiveDate, f64)>,
+    budget_deltas: Vec<(String, f64)>,
     scroll_budget_to_bottom: bool,
 
     current_tab: Tabs,

@@ -36,10 +36,7 @@ pub fn load_budget() -> Option<LazyFrame> {
         let file = File::create(&path).expect("Failed to create 'budget.csv'");
 
         let mut blank_budget = DataFrame::new(vec![
-            Column::new_empty("B_Nr".into(), &DataType::Int64),
             Column::new_empty("Category".into(), &DataType::String),
-            Column::new_empty("Start Date".into(), &DataType::Date),
-            Column::new_empty("End Date".into(), &DataType::Date),
             Column::new_empty("Budget Amount".into(), &DataType::Float32),
         ])
         .expect("Failed to create blank budget");
@@ -58,11 +55,7 @@ pub fn load_budget() -> Option<LazyFrame> {
             .with_try_parse_dates(true)
             .finish()
             .expect("Failed to load budget");
-        let filtered_budget = budget.with_column(
-            (col("End Date").dt().month() - col("Start Date").dt().month() + lit(1))
-                .alias("Month Difference"),
-        );
 
-        Some(filtered_budget)
+        Some(budget)
     }
 }
