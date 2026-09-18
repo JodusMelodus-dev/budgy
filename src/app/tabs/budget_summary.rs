@@ -14,7 +14,7 @@ impl Budgy {
             if let Some(mut summary) = self.previous_summary_lf.clone() {
                 if let Some(statement) = self.statement_lf.clone() {
                     if let Some(budget) = self.budget_lf.clone() {
-                        summary = summary.with_column(col("Balance").alias("Previous Balance"));
+                        summary = summary.rename(["Balance"], ["Previous Balance"], true);
 
                         let mut result = summary.left_join(
                             statement,
@@ -28,7 +28,7 @@ impl Budgy {
                                 col("Money In").sum(),
                                 col("Money Out").sum(),
                                 col("Fee").sum(),
-                                col("Previous Balance").sum(),
+                                col("Previous Balance").max(),
                             ])
                             .left_join(budget, col("Parent Category"), col("Category"));
 
