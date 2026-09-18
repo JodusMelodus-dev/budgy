@@ -8,7 +8,7 @@ use polars::{
     frame::{DataFrame, column::Column},
     io::{SerWriter, csv::write::CsvWriter},
     lazy::{
-        dsl::{col, lit},
+        dsl::col,
         frame::{LazyCsvReader, LazyFileListReader, LazyFrame},
     },
 };

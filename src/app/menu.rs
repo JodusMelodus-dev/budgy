@@ -2,7 +2,7 @@ use std::fs::File;
 
 use egui::Ui;
 use polars::io::{SerWriter, csv::write::CsvWriter};
-use rfd::{FileDialog, MessageButtons, MessageDialog, MessageLevel};
+use rfd::{FileDialog};
 
 use crate::app::Budgy;
 
@@ -20,11 +20,17 @@ impl Budgy {
     }
 
     pub fn export_csv(&mut self) {
-        let path = FileDialog::new()
-            .set_file_name("budget summary.csv")
-            .add_filter("CSV Files", &["csv"])
-            .save_file()
-            .expect("Failed to get save path");
+        let path = match self.config.statement_path.clone() {
+            Some(mut p) => {
+                p.set_file_name("summary.csv");
+                p
+            }
+            None => FileDialog::new()
+                .set_file_name("summary.csv")
+                .add_filter("CSV Files", &["csv"])
+                .save_file()
+                .expect("No path selected"),
+        };
 
         let file = File::create(&path).expect("Failed to create file");
         if let Some(mut budget_summary_df) = self.budget_summary.clone() {
@@ -33,15 +39,6 @@ impl Budgy {
                 .with_separator(b',')
                 .finish(&mut budget_summary_df)
                 .expect("Failed to export file");
-
-            MessageDialog::new()
-                .set_level(MessageLevel::Info)
-                .set_description(format!(
-                    "Successfully exported budget summary to: {}",
-                    path.to_str().unwrap()
-                ))
-                .set_buttons(MessageButtons::Ok)
-                .show();
         }
     }
 
