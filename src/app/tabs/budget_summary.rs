@@ -11,46 +11,46 @@ impl Budgy {
         if let Some(df) = &self.budget_summary {
             self.display_dataframe(ui, df);
         } else {
-            if let Some(statement) = self.statement_lf.clone() {
-                if let Some(budget) = self.budget_lf.clone() {
-                    if let Some(mut summary) = self.previous_summary_lf.clone() {
-                        summary = summary
-                            .with_column(col("Balance").alias("Previous Balance"));
+            if let Some(mut summary) = self.previous_summary_lf.clone() {
+                if let Some(statement) = self.statement_lf.clone() {
+                    if let Some(budget) = self.budget_lf.clone() {
+                        summary = summary.with_column(col("Balance").alias("Previous Balance"));
 
-                        let result = statement
+                        let mut result = summary.left_join(
+                            statement,
+                            col("Parent Category"),
+                            col("Parent Category"),
+                        );
+
+                        result = result
                             .group_by([col("Parent Category")])
                             .agg([
                                 col("Money In").sum(),
                                 col("Money Out").sum(),
                                 col("Fee").sum(),
+                                col("Previous Balance").sum(),
                             ])
                             .left_join(budget, col("Parent Category"), col("Category"));
 
-                        let mut new = result.left_join(
-                            summary,
-                            col("Parent Category"),
-                            col("Parent Category"),
-                        );
-
-                        new = new.with_column(
+                        result = result.with_column(
                             (col("Money In") + col("Money Out") + col("Fee")
                                 - col("Budget Amount")
                                 + col("Previous Balance"))
                             .alias("Balance"),
                         );
 
-                        self.budget_summary = new
+                        self.budget_summary = result
                             .sort(["Parent Category"], SortMultipleOptions::default())
                             .collect()
                             .ok();
                     } else {
-                        self.previous_summary_lf = load_previous_summary();
+                        println!("No budget");
                     }
                 } else {
-                    println!("No budget");
+                    ui.heading("Missing budget");
                 }
             } else {
-                ui.heading("Missing budget");
+                self.previous_summary_lf = load_previous_summary();
             }
         }
     }
