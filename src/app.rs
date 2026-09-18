@@ -21,7 +21,6 @@ pub struct Budgy {
     statement_df: Option<DataFrame>,
     statement_lf: Option<LazyFrame>,
 
-    previous_summary_df: Option<DataFrame>,
     previous_summary_lf: Option<LazyFrame>,
 
     budget_deltas: Vec<(String, f64)>,
@@ -45,7 +44,6 @@ impl Budgy {
             statement_df: None,
             statement_lf: None,
 
-            previous_summary_df: None,
             previous_summary_lf: None,
 
             budget_deltas: Vec::new(),
@@ -113,9 +111,5 @@ impl eframe::App for Budgy {
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, APP_KEY, &self.config);
-    }
-
-    fn on_exit(&mut self) {
-        self.export_csv();
     }
 }
