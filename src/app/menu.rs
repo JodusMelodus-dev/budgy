@@ -15,6 +15,10 @@ impl Budgy {
             .add_filter("CSV Files", &["csv"])
             .pick_file();
 
+        self.statement_lf = None;
+        self.statement_df = None;
+        self.previous_summary_lf = None;
+
         if let Some(path) = &self.config.statement_path {
             if !self.config.recent.contains(path) {
                 self.config.recent.insert(0, path.to_path_buf());
@@ -39,7 +43,9 @@ impl Budgy {
         if let Some(budget_summary_df) = self.budget_summary.clone() {
             let mut summary = budget_summary_df
                 .lazy()
-                .select([col("Parent Category"), col("Balance")]).collect().unwrap();
+                .select([col("Parent Category"), col("Balance")])
+                .collect()
+                .unwrap();
 
             CsvWriter::new(file)
                 .include_header(true)
