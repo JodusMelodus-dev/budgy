@@ -15,7 +15,6 @@ impl Budgy {
                 if let Some(budget) = self.budget_lf.clone() {
                     if let Some(mut summary) = self.previous_summary_lf.clone() {
                         summary = summary
-                            .select([col("Parent Category"), col("Balance")])
                             .with_column(col("Balance").alias("Previous Balance"));
 
                         let result = statement

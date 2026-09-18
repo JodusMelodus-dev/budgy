@@ -1,8 +1,11 @@
 use std::fs::File;
 
 use egui::Ui;
-use polars::io::{SerWriter, csv::write::CsvWriter};
-use rfd::{FileDialog};
+use polars::{
+    io::{SerWriter, csv::write::CsvWriter},
+    lazy::{dsl::col, frame::IntoLazy},
+};
+use rfd::FileDialog;
 
 use crate::app::Budgy;
 
@@ -33,11 +36,15 @@ impl Budgy {
         };
 
         let file = File::create(&path).expect("Failed to create file");
-        if let Some(mut budget_summary_df) = self.budget_summary.clone() {
+        if let Some(budget_summary_df) = self.budget_summary.clone() {
+            let mut summary = budget_summary_df
+                .lazy()
+                .select([col("Parent Category"), col("Balance")]).collect().unwrap();
+
             CsvWriter::new(file)
                 .include_header(true)
                 .with_separator(b',')
-                .finish(&mut budget_summary_df)
+                .finish(&mut summary)
                 .expect("Failed to export file");
         }
     }
