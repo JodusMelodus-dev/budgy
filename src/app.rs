@@ -64,6 +64,13 @@ impl Budgy {
 
 impl eframe::App for Budgy {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        if ui.ctx().input_mut(|i| i.consume_shortcut(&CTRL_O)) {
+            self.import_csv();
+        }
+        if ui.ctx().input_mut(|i| i.consume_shortcut(&CTRL_E)) {
+            self.export_csv();
+        }
+        
         egui::Panel::top("Menu")
             .frame(Frame::default().inner_margin(5.0))
             .show_separator_line(false)
