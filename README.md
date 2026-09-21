@@ -7,8 +7,8 @@
 
 ## Quick-start Guide
 
-- Start by importing your bank statement using the `File` menu and selecting the `Import CSV` option. Budgy will edit and update this file, so make a copy if you do not want your original file to be changed.
-- Update the current categories to your choosing. The transactions will be ignored if they do not match any in your budget. Remember to click `save` once you are satisfied.
-- On the `Summary` tab, you can view the budget summary generated from your bank statement and budget.
-- You can export this summary to a `.csv` file by selecting `File` and then `Export CSV`.
-- Finally on the `Budget` tab, you can edit your budget. Remember to click `save` once you are done.
+- Start by navigating to the `Statement` tab.
+- Then import your past month's bank statement `.csv` from the `File` menu by selecting the `Import Statement` option.
+- Ensure your budget is setup correctly on the `Budget` tab.
+- View your summary on the `Summary` tab.
+- Export your generated summary using the `File` menu and selecting the `Export Summary` option.

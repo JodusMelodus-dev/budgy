@@ -63,11 +63,13 @@ impl eframe::App for Budgy {
             .show(ui, |ui| {
                 egui::MenuBar::new().ui(ui, |ui| {
                     ui.menu_button("File", |ui| {
-                        if ui.button("Import statement CSV").clicked() {
+                        ui.set_width(150.0);
+
+                        if ui.button("Import Statement").clicked() {
                             self.import_csv();
                         }
 
-                        if ui.button("Export summary CSV").clicked() {
+                        if ui.button("Export Summary").clicked() {
                             self.export_csv();
                         }
 
