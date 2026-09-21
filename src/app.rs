@@ -70,7 +70,7 @@ impl eframe::App for Budgy {
         if ui.ctx().input_mut(|i| i.consume_shortcut(&CTRL_E)) {
             self.export_csv();
         }
-        
+
         egui::Panel::top("Menu")
             .frame(Frame::default().inner_margin(5.0))
             .show_separator_line(false)
@@ -88,6 +88,7 @@ impl eframe::App for Budgy {
                         }
 
                         ui.menu_button("Open Recent", |ui| {
+                            ui.set_min_width(180.0);
                             self.open_recent(ui);
                         });
 
@@ -95,6 +96,13 @@ impl eframe::App for Budgy {
 
                         if ui.button_with_shortcut("Exit", ALT_F4) {
                             ui.send_viewport_cmd(ViewportCommand::Close);
+                        }
+                    });
+                    ui.menu_button("Settings", |ui| {
+                        ui.set_width(180.0);
+
+                        if ui.button("Clear recents").clicked() {
+                            self.config.recent.clear();
                         }
                     });
                 });

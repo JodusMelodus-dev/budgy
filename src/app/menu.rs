@@ -57,12 +57,16 @@ impl Budgy {
 
     pub fn open_recent(&mut self, ui: &mut Ui) {
         ui.vertical(|ui| {
-            for path in &self.config.recent {
-                if ui
-                    .button(path.file_name().unwrap().to_str().unwrap_or("NULL"))
-                    .clicked()
-                {
-                    self.config.statement_path = Some(path.to_path_buf());
+            if self.config.recent.is_empty() {
+                ui.label("No recents");
+            } else {
+                for path in &self.config.recent {
+                    if ui
+                        .button(path.file_name().unwrap().to_str().unwrap_or("NULL"))
+                        .clicked()
+                    {
+                        self.config.statement_path = Some(path.to_path_buf());
+                    }
                 }
             }
         });
