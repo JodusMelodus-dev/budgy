@@ -7,10 +7,17 @@ mod ui;
 use std::path::PathBuf;
 
 use eframe::APP_KEY;
-use egui::{Color32, Frame, ViewportCommand};
+use egui::{Color32, Frame, Key, KeyboardShortcut, Modifiers, ViewportCommand};
 use polars::{frame::DataFrame, lazy::frame::LazyFrame};
 
-use crate::app::{config::Config, help::load_budget, tabs::Tabs};
+use crate::{
+    app::{config::Config, help::load_budget, tabs::Tabs},
+    extra_ui::ExtraUi,
+};
+
+const CTRL_O: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::O);
+const CTRL_E: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::E);
+const ALT_F4: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::F4);
 
 pub struct Budgy {
     budget_summary: Option<DataFrame>,
@@ -63,13 +70,13 @@ impl eframe::App for Budgy {
             .show(ui, |ui| {
                 egui::MenuBar::new().ui(ui, |ui| {
                     ui.menu_button("File", |ui| {
-                        ui.set_width(150.0);
+                        ui.set_width(180.0);
 
-                        if ui.button("Import Statement").clicked() {
+                        if ui.button_with_shortcut("Import Statement", CTRL_O) {
                             self.import_csv();
                         }
 
-                        if ui.button("Export Summary").clicked() {
+                        if ui.button_with_shortcut("Export Summary", CTRL_E) {
                             self.export_csv();
                         }
 
@@ -79,7 +86,7 @@ impl eframe::App for Budgy {
 
                         ui.separator();
 
-                        if ui.button("Exit").clicked() {
+                        if ui.button_with_shortcut("Exit", ALT_F4) {
                             ui.send_viewport_cmd(ViewportCommand::Close);
                         }
                     });

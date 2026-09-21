@@ -1,4 +1,5 @@
 mod app;
+mod extra_ui;
 mod icon;
 
 use crate::{app::Budgy, icon::generate_icon_data};
