@@ -73,10 +73,6 @@ pub fn load_previous_summary() -> Option<LazyFrame> {
 
             let mut blank_summary = DataFrame::new(vec![
                 categories.clone().with_name("Category".into()),
-                Column::new("Money In".into(), vec![0.0; categories.len()]),
-                Column::new("Money Out".into(), vec![0.0; categories.len()]),
-                Column::new("Fee".into(), vec![0.0; categories.len()]),
-                Column::new("Budget Amount".into(), vec![0.0; categories.len()]),
                 Column::new("Balance".into(), vec![0.0; categories.len()]),
             ])
             .expect("Failed to create blank summary");

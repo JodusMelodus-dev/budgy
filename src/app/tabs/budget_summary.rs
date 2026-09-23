@@ -10,45 +10,42 @@ impl Budgy {
 
         if let Some(df) = &self.budget_summary {
             self.display_dataframe(ui, df);
-        } else {
-            if let Some(mut summary) = self.previous_summary_lf.clone() {
-                if let Some(statement) = self.statement_lf.clone() {
-                    if let Some(budget) = self.budget_lf.clone() {
-                        summary = summary.rename(["Balance"], ["Previous Balance"], true);
+        } else if let Some(mut summary) = self.previous_summary_lf.clone() {
+            if let Some(statement) = self.statement_lf.clone() {
+                if let Some(budget) = self.budget_lf.clone() {
+                    summary = summary.rename(["Balance"], ["Previous Balance"], true);
 
-                        let mut result =
-                            summary.left_join(statement, col("Category"), col("Category"));
+                    let mut result = summary.left_join(statement, col("Category"), col("Category"));
 
-                        result = result
-                            .group_by([col("Category")])
-                            .agg([
-                                col("Money In").sum(),
-                                col("Money Out").sum(),
-                                col("Fee").sum(),
-                                col("Previous Balance").max(),
-                            ])
-                            .left_join(budget, col("Category"), col("Category"));
+                    result = result
+                        .group_by([col("Category")])
+                        .agg([
+                            col("Money In").sum(),
+                            col("Money Out").sum(),
+                            col("Fee").sum(),
+                            col("Previous Balance").max(),
+                        ])
+                        .left_join(budget, col("Category"), col("Category"));
 
-                        result = result.with_column(
-                            (col("Money In") + col("Money Out") + col("Fee")
-                                - col("Budget Amount")
-                                + col("Previous Balance"))
-                            .alias("Balance"),
-                        );
+                    result = result.with_column(
+                        (col("Money In") + col("Money Out") + col("Fee") - col("Budget Amount")
+                            + col("Previous Balance"))
+                        .alias("Balance"),
+                    );
 
-                        self.budget_summary = result
-                            .sort(["Category"], SortMultipleOptions::default())
-                            .collect()
-                            .ok();
-                    } else {
-                        println!("No budget");
-                    }
+                    self.budget_summary = result
+                        .sort(["Category"], SortMultipleOptions::default())
+                        .collect()
+                        .ok();
                 } else {
                     ui.heading("Missing budget");
                 }
             } else {
-                self.previous_summary_lf = load_previous_summary();
+                ui.heading("Missing statement");
             }
+        } else {
+            ui.heading("Loading previous summary");
+            self.previous_summary_lf = load_previous_summary();
         }
     }
 }
