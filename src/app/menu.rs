@@ -71,4 +71,8 @@ impl Budgy {
             }
         });
     }
+
+    pub fn open_help(&self) {
+        webbrowser::open("https://jodusmelodus-dev.github.io/budgy/").unwrap();
+    }
 }

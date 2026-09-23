@@ -105,6 +105,13 @@ impl eframe::App for Budgy {
                             self.config.recent.clear();
                         }
                     });
+                    ui.menu_button("Help", |ui| {
+                        ui.set_width(180.0);
+
+                        if ui.button("Open Website").clicked() {
+                            self.open_help();
+                        }
+                    });
                 });
 
                 ui.separator();
