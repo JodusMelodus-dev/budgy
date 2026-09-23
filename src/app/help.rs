@@ -5,7 +5,6 @@ use std::{
 };
 
 use polars::{
-    datatypes::DataType,
     frame::{DataFrame, column::Column},
     io::{SerWriter, csv::write::CsvWriter},
     lazy::{
@@ -27,7 +26,7 @@ pub fn load_statement(path: &Path) -> Option<LazyFrame> {
         data = data.filter(
             col("Category")
                 .is_not_null()
-                .and(col("Parent Category").is_not_null()),
+                .and(col("Category").is_not_null()),
         );
 
         Some(data)
@@ -41,8 +40,8 @@ pub fn load_budget() -> Option<LazyFrame> {
         let file = File::create(&path).expect("Failed to create 'budget.csv'");
 
         let mut blank_budget = DataFrame::new(vec![
-            Column::new_empty("Category".into(), &DataType::String),
-            Column::new_empty("Budget Amount".into(), &DataType::Float32),
+            Column::new("Category".into(), [""]),
+            Column::new("Budget Amount".into(), [0.0]),
         ])
         .expect("Failed to create blank budget");
 
@@ -51,18 +50,15 @@ pub fn load_budget() -> Option<LazyFrame> {
             .with_separator(b',')
             .finish(&mut blank_budget)
             .expect("Failed to save blank budget");
-
-        println!("Populate budget.csv before running Budgy again.");
-        None
-    } else {
-        let budget = LazyCsvReader::new(path)
-            .with_has_header(true)
-            .with_try_parse_dates(true)
-            .finish()
-            .expect("Failed to load budget");
-
-        Some(budget)
     }
+
+    let budget = LazyCsvReader::new(path)
+        .with_has_header(true)
+        .with_try_parse_dates(true)
+        .finish()
+        .expect("Failed to load budget");
+
+    Some(budget)
 }
 
 pub fn load_previous_summary() -> Option<LazyFrame> {
@@ -76,7 +72,7 @@ pub fn load_previous_summary() -> Option<LazyFrame> {
             let categories = b.column("Category").unwrap();
 
             let mut blank_summary = DataFrame::new(vec![
-                categories.clone().with_name("Parent Category".into()),
+                categories.clone().with_name("Category".into()),
                 Column::new("Money In".into(), vec![0.0; categories.len()]),
                 Column::new("Money Out".into(), vec![0.0; categories.len()]),
                 Column::new("Fee".into(), vec![0.0; categories.len()]),

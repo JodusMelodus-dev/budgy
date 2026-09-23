@@ -16,21 +16,18 @@ impl Budgy {
                     if let Some(budget) = self.budget_lf.clone() {
                         summary = summary.rename(["Balance"], ["Previous Balance"], true);
 
-                        let mut result = summary.left_join(
-                            statement,
-                            col("Parent Category"),
-                            col("Parent Category"),
-                        );
+                        let mut result =
+                            summary.left_join(statement, col("Category"), col("Category"));
 
                         result = result
-                            .group_by([col("Parent Category")])
+                            .group_by([col("Category")])
                             .agg([
                                 col("Money In").sum(),
                                 col("Money Out").sum(),
                                 col("Fee").sum(),
                                 col("Previous Balance").max(),
                             ])
-                            .left_join(budget, col("Parent Category"), col("Category"));
+                            .left_join(budget, col("Category"), col("Category"));
 
                         result = result.with_column(
                             (col("Money In") + col("Money Out") + col("Fee")
@@ -40,7 +37,7 @@ impl Budgy {
                         );
 
                         self.budget_summary = result
-                            .sort(["Parent Category"], SortMultipleOptions::default())
+                            .sort(["Category"], SortMultipleOptions::default())
                             .collect()
                             .ok();
                     } else {

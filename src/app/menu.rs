@@ -43,7 +43,7 @@ impl Budgy {
         if let Some(budget_summary_df) = self.budget_summary.clone() {
             let mut summary = budget_summary_df
                 .lazy()
-                .select([col("Parent Category"), col("Balance")])
+                .select([col("Category"), col("Balance")])
                 .collect()
                 .unwrap();
 
