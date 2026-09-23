@@ -12,10 +12,7 @@ impl Budgy {
     pub fn display_budget_tab(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             if ui.button("Add Row").clicked() {
-                self.budget_deltas.push((
-                    "".to_string(),
-                    0.0,
-                ));
+                self.budget_deltas.push(("".to_string(), 0.0));
                 self.scroll_budget_to_bottom = true;
             }
 
@@ -83,8 +80,7 @@ impl Budgy {
                     let category = categories.get(i).unwrap_or("").to_string();
                     let budget_amount = budget_amounts.get(i).unwrap_or(0.0);
 
-                    self.budget_deltas
-                        .push((category, budget_amount));
+                    self.budget_deltas.push((category, budget_amount));
                 }
             }
         } else {
@@ -96,7 +92,7 @@ impl Budgy {
         let mut categories = Vec::with_capacity(self.budget_deltas.len());
         let mut budget_amounts = Vec::with_capacity(self.budget_deltas.len());
 
-        for (category, budget_amount) in self.budget_deltas.drain(..) {
+        for (category, budget_amount) in self.budget_deltas.clone() {
             categories.push(category);
             budget_amounts.push(budget_amount);
         }
