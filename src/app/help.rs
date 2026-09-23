@@ -1,25 +1,36 @@
+use core::panic;
 use std::{
     fs::File,
     path::{Path, PathBuf},
 };
 
 use polars::{
-    datatypes::DataType,
     frame::{DataFrame, column::Column},
     io::{SerWriter, csv::write::CsvWriter},
     lazy::{
-        dsl::{col, lit},
-        frame::{LazyCsvReader, LazyFileListReader, LazyFrame},
+        dsl::col,
+        frame::{IntoLazy, LazyCsvReader, LazyFileListReader, LazyFrame},
     },
 };
 
 pub fn load_statement(path: &Path) -> Option<LazyFrame> {
-    let data = LazyCsvReader::new(path)
-        .with_has_header(true)
-        .with_try_parse_dates(true)
-        .finish()
-        .expect("Failed to load statement");
-    Some(data)
+    if !path.exists() {
+        None
+    } else {
+        let mut data = LazyCsvReader::new(path)
+            .with_has_header(true)
+            .with_try_parse_dates(true)
+            .finish()
+            .expect("Failed to load statement");
+
+        data = data.filter(
+            col("Category")
+                .is_not_null()
+                .and(col("Category").is_not_null()),
+        );
+
+        Some(data)
+    }
 }
 
 pub fn load_budget() -> Option<LazyFrame> {
@@ -29,11 +40,8 @@ pub fn load_budget() -> Option<LazyFrame> {
         let file = File::create(&path).expect("Failed to create 'budget.csv'");
 
         let mut blank_budget = DataFrame::new(vec![
-            Column::new_empty("Category".into(), &DataType::String),
-            Column::new_empty("Start Date".into(), &DataType::Date),
-            Column::new_empty("End Date".into(), &DataType::Date),
-            Column::new_empty("Budget Amount".into(), &DataType::Float32),
-            Column::new_empty("Color".into(), &DataType::String),
+            Column::new("Category".into(), [""]),
+            Column::new("Budget Amount".into(), [0.0]),
         ])
         .expect("Failed to create blank budget");
 
@@ -42,20 +50,49 @@ pub fn load_budget() -> Option<LazyFrame> {
             .with_separator(b',')
             .finish(&mut blank_budget)
             .expect("Failed to save blank budget");
-
-        println!("Populate budget.csv before running Budgy again.");
-        None
-    } else {
-        let budget = LazyCsvReader::new(path)
-            .with_has_header(true)
-            .with_try_parse_dates(true)
-            .finish()
-            .expect("Failed to load budget");
-        let filtered_budget = budget.with_column(
-            (col("End Date").dt().month() - col("Start Date").dt().month() + lit(1))
-                .alias("Month Difference"),
-        );
-
-        Some(filtered_budget)
     }
+
+    let budget = LazyCsvReader::new(path)
+        .with_has_header(true)
+        .with_try_parse_dates(true)
+        .finish()
+        .expect("Failed to load budget");
+
+    Some(budget)
+}
+
+pub fn load_previous_summary() -> Option<LazyFrame> {
+    let path = PathBuf::from("summary.csv");
+
+    let summary = if !path.exists() {
+        let file = File::create(&path).expect("Failed to create blank summary");
+
+        if let Some(budget) = load_budget() {
+            let b = budget.collect().unwrap();
+            let categories = b.column("Category").unwrap();
+
+            let mut blank_summary = DataFrame::new(vec![
+                categories.clone().with_name("Category".into()),
+                Column::new("Balance".into(), vec![0.0; categories.len()]),
+            ])
+            .expect("Failed to create blank summary");
+
+            CsvWriter::new(file)
+                .include_header(true)
+                .with_separator(b',')
+                .finish(&mut blank_summary)
+                .expect("Failed to save blank summary");
+
+            blank_summary.lazy()
+        } else {
+            panic!("ARH");
+        }
+    } else {
+        LazyCsvReader::new(path)
+            .with_has_header(true)
+            .finish()
+            .expect("Failed to load previous summary")
+    };
+
+    Some(summary)
 }

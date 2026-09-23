@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
-    pub recents: Vec<PathBuf>,
+    pub recent: Vec<PathBuf>,
     pub statement_path: Option<PathBuf>,
     pub categories: Vec<(String, Color32)>,
 }
@@ -13,7 +13,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            recents: Vec::new(),
+            recent: Vec::new(),
             statement_path: None,
 
             categories: vec![

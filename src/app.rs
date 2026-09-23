@@ -1,21 +1,23 @@
 mod config;
 mod help;
+mod menu;
 mod tabs;
 mod ui;
 
-use std::{collections::HashMap, fs::File, path::PathBuf};
+use std::path::PathBuf;
 
-use chrono::NaiveDate;
 use eframe::APP_KEY;
-use egui::{Color32, Frame, ViewportCommand, epaint::Hsva};
-use polars::{
-    frame::DataFrame,
-    io::{SerWriter, csv::write::CsvWriter},
-    lazy::frame::LazyFrame,
-};
-use rfd::{FileDialog, MessageButtons, MessageDialog, MessageLevel};
+use egui::{Color32, Frame, Key, KeyboardShortcut, Modifiers, ViewportCommand};
+use polars::{frame::DataFrame, lazy::frame::LazyFrame};
 
-use crate::app::{config::Config, help::load_budget, tabs::Tabs};
+use crate::{
+    app::{config::Config, help::load_budget, tabs::Tabs},
+    extra_ui::ExtraUi,
+};
+
+const CTRL_O: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::O);
+const CTRL_E: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::E);
+const ALT_F4: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::F4);
 
 pub struct Budgy {
     budget_summary: Option<DataFrame>,
@@ -26,8 +28,9 @@ pub struct Budgy {
     statement_df: Option<DataFrame>,
     statement_lf: Option<LazyFrame>,
 
-    statement_deltas: HashMap<i64, String>,
-    budget_deltas: Vec<(i64, String, NaiveDate, NaiveDate, f64, Hsva)>,
+    previous_summary_lf: Option<LazyFrame>,
+
+    budget_deltas: Vec<(String, f64)>,
     scroll_budget_to_bottom: bool,
 
     current_tab: Tabs,
@@ -48,7 +51,8 @@ impl Budgy {
             statement_df: None,
             statement_lf: None,
 
-            statement_deltas: HashMap::new(),
+            previous_summary_lf: None,
+
             budget_deltas: Vec::new(),
             scroll_budget_to_bottom: false,
 
@@ -60,69 +64,45 @@ impl Budgy {
 
 impl eframe::App for Budgy {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        if ui.ctx().input_mut(|i| i.consume_shortcut(&CTRL_O)) {
+            self.import_csv();
+        }
+        if ui.ctx().input_mut(|i| i.consume_shortcut(&CTRL_E)) {
+            self.export_csv();
+        }
+
         egui::Panel::top("Menu")
             .frame(Frame::default().inner_margin(5.0))
             .show_separator_line(false)
             .show(ui, |ui| {
                 egui::MenuBar::new().ui(ui, |ui| {
                     ui.menu_button("File", |ui| {
-                        if ui.button("Import CSV").clicked() {
-                            self.config.statement_path = FileDialog::new()
-                                .add_filter("CSV Files", &["csv"])
-                                .pick_file();
+                        ui.set_width(180.0);
 
-                            if let Some(path) = &self.config.statement_path {
-                                if !self.config.recents.contains(path) {
-                                    self.config.recents.insert(0, path.to_path_buf());
-                                }
-                            }
+                        if ui.button_with_shortcut("Import Statement", CTRL_O) {
+                            self.import_csv();
                         }
 
-                        if ui.button("Export CSV").clicked() {
-                            let path = FileDialog::new()
-                                .set_file_name("budget summary.csv")
-                                .add_filter("CSV Files", &["csv"])
-                                .save_file()
-                                .expect("Failed to get save path");
-
-                            let file = File::create(&path).expect("Failed to create file");
-                            if let Some(mut budget_summary_df) = self.budget_summary.clone() {
-                                CsvWriter::new(file)
-                                    .include_header(true)
-                                    .with_separator(b',')
-                                    .finish(&mut budget_summary_df)
-                                    .expect("Failed to export file");
-
-                                MessageDialog::new()
-                                    .set_level(MessageLevel::Info)
-                                    .set_description(format!(
-                                        "Successfully exported budget summary to: {}",
-                                        path.to_str().unwrap()
-                                    ))
-                                    .set_buttons(MessageButtons::Ok)
-                                    .show();
-                            }
+                        if ui.button_with_shortcut("Export Summary", CTRL_E) {
+                            self.export_csv();
                         }
 
                         ui.menu_button("Open Recent", |ui| {
-                            ui.vertical(|ui| {
-                                for path in &self.config.recents {
-                                    if ui
-                                        .button(
-                                            path.file_name().unwrap().to_str().unwrap_or("NULL"),
-                                        )
-                                        .clicked()
-                                    {
-                                        self.config.statement_path = Some(path.to_path_buf());
-                                    }
-                                }
-                            });
+                            ui.set_min_width(180.0);
+                            self.open_recent(ui);
                         });
 
                         ui.separator();
 
-                        if ui.button("Exit").clicked() {
+                        if ui.button_with_shortcut("Exit", ALT_F4) {
                             ui.send_viewport_cmd(ViewportCommand::Close);
+                        }
+                    });
+                    ui.menu_button("Settings", |ui| {
+                        ui.set_width(180.0);
+
+                        if ui.button("Clear recents").clicked() {
+                            self.config.recent.clear();
                         }
                     });
                 });
@@ -131,8 +111,8 @@ impl eframe::App for Budgy {
 
                 ui.horizontal(|ui| {
                     ui.selectable_value(&mut self.current_tab, Tabs::Statement, "Statement");
-                    ui.selectable_value(&mut self.current_tab, Tabs::BudgetSummary, "Summary");
                     ui.selectable_value(&mut self.current_tab, Tabs::Budget, "Budget");
+                    ui.selectable_value(&mut self.current_tab, Tabs::BudgetSummary, "Summary");
                 });
             });
 
