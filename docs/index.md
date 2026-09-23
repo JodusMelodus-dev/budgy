@@ -1,6 +1,6 @@
 # Budgy
 
-> ![Budgie](assets/budgie3_21x24.png)
+> ![Budgie](../assets/budgie3_21x24.png)
 > Welcome to Budgy!
 > 
 > Budgy is a free open-source budgeting application built in Rust using the polars library. See the quick-start guide below to get started.
