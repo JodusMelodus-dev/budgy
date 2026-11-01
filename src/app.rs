@@ -1,93 +1,145 @@
-/// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)] // if we add new fields, give them default values when deserializing old state
-pub struct TemplateApp {
-    // Example stuff:
-    label: String,
+mod config;
+mod help;
+mod menu;
+mod tabs;
+mod ui;
 
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
+use std::path::PathBuf;
+
+use egui::{Color32, Frame, Key, KeyboardShortcut, Modifiers, ViewportCommand};
+use polars::{frame::DataFrame, lazy::frame::LazyFrame};
+
+use crate::{
+    app::{config::Config, help::load_budget, tabs::Tabs},
+    extra_ui::ExtraUi,
+};
+
+const CTRL_O: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::O);
+const CTRL_E: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::E);
+const ALT_F4: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::F4);
+
+pub struct Budgy {
+    budget_summary: Option<DataFrame>,
+
+    budget_df: Option<DataFrame>,
+    budget_lf: Option<LazyFrame>,
+
+    statement_df: Option<DataFrame>,
+    statement_lf: Option<LazyFrame>,
+
+    previous_summary_lf: Option<LazyFrame>,
+
+    budget_deltas: Vec<(String, f64)>,
+    scroll_budget_to_bottom: bool,
+
+    current_tab: Tabs,
+    config: Config,
 }
 
-impl Default for TemplateApp {
-    fn default() -> Self {
+impl Budgy {
+    pub fn new(mut config: Config, statement_path: Option<String>) -> Self {
+        config.statement_path =
+            statement_path.map_or(config.statement_path, |p| Some(PathBuf::from(p)));
+
         Self {
-            // Example stuff:
-            label: "Hello World!".to_owned(),
-            value: 2.7,
+            budget_summary: None,
+
+            budget_df: None,
+            budget_lf: load_budget(),
+
+            statement_df: None,
+            statement_lf: None,
+
+            previous_summary_lf: None,
+
+            budget_deltas: Vec::new(),
+            scroll_budget_to_bottom: false,
+
+            current_tab: Tabs::Statement,
+            config,
         }
     }
 }
 
-impl TemplateApp {
-    /// Called once before the first frame.
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        // This is also where you can customize the look and feel of egui using
-        // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
-
-        // Load previous app state (if any).
-        // Note that you must enable the `persistence` feature for this to work.
-        if let Some(storage) = cc.storage {
-            eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
-        } else {
-            Default::default()
-        }
-    }
-}
-
-impl eframe::App for TemplateApp {
-    /// Called by the framework to save state before shutdown.
+impl eframe::App for Budgy {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, eframe::APP_KEY, self);
+        eframe::set_value(storage, eframe::APP_KEY, &self.config);
     }
 
-    /// Called each time the UI needs repainting, which may be many times per second.
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
+        if ui.ctx().input_mut(|i| i.consume_shortcut(&CTRL_O)) {
+            self.import_csv();
+        }
+        if ui.ctx().input_mut(|i| i.consume_shortcut(&CTRL_E)) {
+            self.export_csv();
+        }
 
-        egui::Panel::top("top_panel").show(ui, |ui| {
-            // The top panel is often a good place for a menu bar:
-
-            egui::MenuBar::new().ui(ui, |ui| {
-                // NOTE: no File->Quit on web pages!
-                let is_web = cfg!(target_arch = "wasm32");
-                if !is_web {
+        egui::Panel::top("Menu")
+            .frame(Frame::default().inner_margin(5.0))
+            .show_separator_line(false)
+            .show(ui, |ui| {
+                egui::MenuBar::new().ui(ui, |ui| {
                     ui.menu_button("File", |ui| {
-                        if ui.button("Quit").clicked() {
-                            ui.send_viewport_cmd(egui::ViewportCommand::Close);
+                        ui.set_width(180.0);
+
+                        if ui.button_with_shortcut("Import Statement", CTRL_O) {
+                            self.import_csv();
+                        }
+
+                        if ui.button_with_shortcut("Export Summary", CTRL_E) {
+                            self.export_csv();
+                        }
+
+                        ui.menu_button("Open Recent", |ui| {
+                            ui.set_min_width(180.0);
+                            self.open_recent(ui);
+                        });
+
+                        ui.separator();
+
+                        if ui.button_with_shortcut("Exit", ALT_F4) {
+                            ui.send_viewport_cmd(ViewportCommand::Close);
                         }
                     });
-                    ui.add_space(16.0);
-                }
+                    ui.menu_button("Settings", |ui| {
+                        ui.set_width(180.0);
 
-                egui::widgets::global_theme_preference_buttons(ui);
+                        if ui.button("Clear recents").clicked() {
+                            self.config.recent.clear();
+                        }
+                    });
+                    ui.menu_button("Help", |ui| {
+                        ui.set_width(180.0);
+
+                        if ui.button("Open Website").clicked() {
+                            self.open_help();
+                        }
+                    });
+                });
+
+                ui.separator();
+
+                ui.horizontal(|ui| {
+                    ui.selectable_value(&mut self.current_tab, Tabs::Statement, "Statement");
+                    ui.selectable_value(&mut self.current_tab, Tabs::Budget, "Budget");
+                    ui.selectable_value(&mut self.current_tab, Tabs::BudgetSummary, "Summary");
+                });
             });
-        });
 
-        egui::CentralPanel::default().show(ui, |ui| {
-            ui.heading("eframe template");
-
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
+        egui::CentralPanel::default()
+            .frame(
+                Frame::default()
+                    .fill(Color32::from_rgb(32, 32, 32))
+                    .corner_radius(5.0)
+                    .outer_margin(5.0)
+                    .inner_margin(10.0),
+            )
+            .show(ui, |ui| {
+                match self.current_tab {
+                    Tabs::Statement => self.display_statement_tab(ui),
+                    Tabs::BudgetSummary => self.display_budget_summary_tab(ui),
+                    Tabs::Budget => self.display_budget_tab(ui),
+                };
             });
-
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
-            }
-
-            ui.separator();
-
-            ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/main/",
-                "Source code."
-            ));
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                egui::warn_if_debug_build(ui);
-            });
-        });
     }
 }

@@ -14,10 +14,24 @@ targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 [dependencies]
 egui = "0.36.0"
 eframe = { version = "0.36.0", features = ["persistence"] }
+egui_extras = { version = "0.36.0", features = ["serde"] }
 log = "0.4.27"
 
-# You only need serde if you want app persistence:
 serde = { version = "1.0.219", features = ["derive"] }
+polars = { version = "0.44", default-features = false, features = [
+    "lazy",
+    "csv",
+    "strings",
+    "temporal",
+    "regex",
+    "cross_join",
+    "diagonal_concat",
+    "fmt_no_tty"
+] }
+getrandom = {version="0.3.4", features= ["wasm_js"]}
+getrandom02 = { package = "getrandom", version = "0.2", features = ["js"] }
+rfd = "0.17.2"
+webbrowser = "1.2.6"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

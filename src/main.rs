@@ -1,28 +1,37 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
+mod app;
+mod extra_ui;
+
+use eframe::APP_KEY;
+use std::env;
+
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
-    env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
+    env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`)
+
+    let args = env::args().collect::<Vec<String>>();
 
     let native_options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([400.0, 300.0])
-            .with_min_inner_size([300.0, 220.0])
-            .with_icon(
-                // NOTE: Adding an icon is optional
-                eframe::icon_data::from_png_bytes(
-                    &include_bytes!("../assets/favicon-512x512.png")[..],
-                )
+        viewport: egui::ViewportBuilder::default().with_icon(
+            eframe::icon_data::from_png_bytes(&include_bytes!("../assets/favicon-512x512.png")[..])
                 .expect("Failed to load icon"),
-            ),
+        ),
         ..Default::default()
     };
+
     eframe::run_native(
-        "eframe template",
+        "Budgy",
         native_options,
-        Box::new(|cc| Ok(Box::new(budgy_web::TemplateApp::new(cc)))),
+        Box::new(|cc| {
+            let config = cc
+                .storage
+                .and_then(|storage| eframe::get_value(storage, APP_KEY))
+                .unwrap_or_default();
+            Ok(Box::new(app::Budgy::new(config, args.get(1).cloned())))
+        }),
     )
 }
 
@@ -52,7 +61,13 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(budgy_web::TemplateApp::new(cc)))),
+                Box::new(|cc| {
+                    let config = cc
+                        .storage
+                        .and_then(|storage| eframe::get_value(storage, APP_KEY))
+                        .unwrap_or_default();
+                    Ok(Box::new(app::Budgy::new(config, None)))
+                }),
             )
             .await;
 
