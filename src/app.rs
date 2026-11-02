@@ -1,4 +1,3 @@
-mod config;
 mod help;
 mod menu;
 mod tabs;
@@ -11,7 +10,6 @@ use polars::{frame::DataFrame, lazy::frame::LazyFrame};
 
 use crate::{
     app::{
-        config::Config,
         help::{load_budget, load_statement},
         tabs::Tabs,
     },
@@ -48,7 +46,6 @@ pub struct Budgy {
     scroll_budget_to_bottom: bool,
 
     current_tab: Tabs,
-    config: Config,
 
     // File picking
     tx: Sender<LoadedFile>,
@@ -56,7 +53,7 @@ pub struct Budgy {
 }
 
 impl Budgy {
-    pub fn new(config: Config) -> Self {
+    pub fn new() -> Self {
         let (tx, rx) = channel();
 
         Self {
@@ -74,7 +71,6 @@ impl Budgy {
             scroll_budget_to_bottom: false,
 
             current_tab: Tabs::Statement,
-            config,
 
             tx,
             rx,
@@ -83,10 +79,6 @@ impl Budgy {
 }
 
 impl eframe::App for Budgy {
-    fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, eframe::APP_KEY, &self.config);
-    }
-
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         if ui.ctx().input_mut(|i| i.consume_shortcut(&CTRL_O)) {
             // self.open_csv_file();

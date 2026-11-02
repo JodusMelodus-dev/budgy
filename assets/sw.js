@@ -2,8 +2,8 @@ var cacheName = 'egui-template-pwa';
 var filesToCache = [
   './',
   './index.html',
-  './budgy_web.js',
-  './budgy_web_bg.wasm',
+  './budgy.js',
+  './budgy_bg.wasm',
 ];
 
 /* Start the service worker and cache all of the app's content */

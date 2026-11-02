@@ -63,6 +63,28 @@ pub fn load_budget(bytes: Vec<u8>) -> Option<LazyFrame> {
     }
 }
 
+pub fn save_file(file_name: String, data_frame: &mut DataFrame) {
+    let mut buf = Vec::new();
+    CsvWriter::new(Cursor::new(&mut buf))
+        .include_header(true)
+        .with_separator(b',')
+        .finish(data_frame)
+        .unwrap();
+
+    execute(async move {
+        if let Some(file) = rfd::AsyncFileDialog::new()
+            .set_file_name(file_name)
+            .add_filter("CSV", &["csv"])
+            .save_file()
+            .await
+        {
+            file.write(&buf).await.unwrap();
+        } else {
+            log::error!("Failed to save file");
+        }
+    });
+}
+
 impl Budgy {
     pub fn load_previous_summary(&self, bytes: Vec<u8>) -> Option<LazyFrame> {
         let summary = if bytes.is_empty() {
@@ -75,23 +97,7 @@ impl Budgy {
                 ])
                 .expect("Failed to create blank summary");
 
-                let mut buf = Vec::new();
-                CsvWriter::new(&mut buf)
-                    .include_header(true)
-                    .with_separator(b',')
-                    .finish(&mut blank_summary)
-                    .expect("Failed to save blank summary");
-
-                execute(async move {
-                    if let Some(file) = rfd::AsyncFileDialog::new()
-                        .set_file_name("summary.csv")
-                        .add_filter("CSV", &["csv"])
-                        .save_file()
-                        .await
-                    {
-                        file.write(&buf).await.unwrap();
-                    }
-                });
+                save_file("summary.csv".to_string(), &mut blank_summary);
 
                 blank_summary.lazy()
             } else {

@@ -1,5 +1,5 @@
 [package]
-name = "budgy_web"
+name = "budgy"
 version = "0.1.0"
 authors = ["JodusMelodus"]
 edition = "2024"

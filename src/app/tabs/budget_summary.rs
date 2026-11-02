@@ -39,12 +39,15 @@ impl Budgy {
                         .ok();
                 } else {
                     ui.heading("Missing budget");
+                    log::error!("Missing budget LazyFrame");
                 }
             } else {
                 ui.heading("Missing statement");
+                log::error!("Missing statement LazyFrame");
             }
         } else {
             ui.heading("Missing previous summary");
+            log::error!("Missing budget summary or previous summary");
         }
     }
 }

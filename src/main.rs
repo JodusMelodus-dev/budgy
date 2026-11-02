@@ -4,8 +4,6 @@
 mod app;
 mod extra_ui;
 
-use eframe::APP_KEY;
-
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
@@ -22,13 +20,7 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "Budgy",
         native_options,
-        Box::new(|cc| {
-            let config = cc
-                .storage
-                .and_then(|storage| eframe::get_value(storage, APP_KEY))
-                .unwrap_or_default();
-            Ok(Box::new(app::Budgy::new(config)))
-        }),
+        Box::new(|_cc| Ok(Box::new(app::Budgy::new()))),
     )
 }
 
@@ -58,13 +50,7 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| {
-                    let config = cc
-                        .storage
-                        .and_then(|storage| eframe::get_value(storage, APP_KEY))
-                        .unwrap_or_default();
-                    Ok(Box::new(app::Budgy::new(config)))
-                }),
+                Box::new(|_cc| Ok(Box::new(app::Budgy::new()))),
             )
             .await;
 

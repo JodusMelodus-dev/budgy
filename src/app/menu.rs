@@ -24,10 +24,6 @@ impl Budgy {
                 let _ = tx.send(super::LoadedFile { file_type, bytes });
             }
         });
-
-        self.statement_lf = None;
-        self.statement_df = None;
-        self.previous_summary_lf = None;
     }
 
     pub fn export_csv(&mut self) {
