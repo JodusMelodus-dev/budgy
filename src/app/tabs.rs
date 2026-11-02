@@ -1,6 +1,6 @@
-pub mod statement;
-pub mod budget_summary;
 pub mod budget;
+pub mod budget_summary;
+pub mod statement;
 
 #[derive(PartialEq)]
 pub enum Tabs {

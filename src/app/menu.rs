@@ -1,8 +1,5 @@
 use crate::app::{Budgy, LoadedFileType};
-use polars::lazy::{
-        dsl::col,
-        frame::IntoLazy,
-    };
+use polars::lazy::{dsl::col, frame::IntoLazy};
 
 use crate::app::help::save_file;
 
@@ -33,15 +30,12 @@ impl Budgy {
     }
 
     pub fn export_csv(&mut self) {
-
-
-        
         if let Some(budget_summary_df) = self.budget_summary.clone() {
             let mut summary = budget_summary_df
-            .lazy()
-            .select([col("Category"), col("Balance")])
-            .collect()
-            .unwrap();
+                .lazy()
+                .select([col("Category"), col("Balance")])
+                .collect()
+                .unwrap();
             save_file("summary.csv".to_string(), &mut summary);
         }
     }
