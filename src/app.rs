@@ -1,23 +1,35 @@
-mod config;
 mod help;
 mod menu;
 mod tabs;
 mod ui;
 
-use std::path::PathBuf;
+use std::sync::mpsc::{Receiver, Sender, channel};
 
-use eframe::APP_KEY;
 use egui::{Color32, Frame, Key, KeyboardShortcut, Modifiers, ViewportCommand};
 use polars::{frame::DataFrame, lazy::frame::LazyFrame};
 
 use crate::{
-    app::{config::Config, help::load_budget, tabs::Tabs},
+    app::{
+        help::{load_budget, load_statement},
+        tabs::Tabs,
+    },
     extra_ui::ExtraUi,
 };
 
 const CTRL_O: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::O);
 const CTRL_E: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::E);
 const ALT_F4: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::F4);
+
+pub enum LoadedFileType {
+    Budget,
+    Statement,
+    Summary,
+}
+
+pub struct LoadedFile {
+    file_type: LoadedFileType,
+    bytes: Vec<u8>,
+}
 
 pub struct Budgy {
     budget_summary: Option<DataFrame>,
@@ -34,19 +46,21 @@ pub struct Budgy {
     scroll_budget_to_bottom: bool,
 
     current_tab: Tabs,
-    config: Config,
+
+    // File picking
+    tx: Sender<LoadedFile>,
+    rx: Receiver<LoadedFile>,
 }
 
 impl Budgy {
-    pub fn new(mut config: Config, statement_path: Option<String>) -> Self {
-        config.statement_path =
-            statement_path.map_or(config.statement_path, |p| Some(PathBuf::from(p)));
+    pub fn new() -> Self {
+        let (tx, rx) = channel();
 
         Self {
             budget_summary: None,
 
             budget_df: None,
-            budget_lf: load_budget(),
+            budget_lf: None,
 
             statement_df: None,
             statement_lf: None,
@@ -57,7 +71,9 @@ impl Budgy {
             scroll_budget_to_bottom: false,
 
             current_tab: Tabs::Statement,
-            config,
+
+            tx,
+            rx,
         }
     }
 }
@@ -65,10 +81,21 @@ impl Budgy {
 impl eframe::App for Budgy {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         if ui.ctx().input_mut(|i| i.consume_shortcut(&CTRL_O)) {
-            self.import_csv();
+            // self.open_csv_file();
+            todo!("IDK");
         }
         if ui.ctx().input_mut(|i| i.consume_shortcut(&CTRL_E)) {
             self.export_csv();
+        }
+
+        while let Ok(file) = self.rx.try_recv() {
+            match file.file_type {
+                LoadedFileType::Budget => self.budget_lf = load_budget(file.bytes),
+                LoadedFileType::Statement => self.statement_lf = load_statement(file.bytes),
+                LoadedFileType::Summary => {
+                    self.previous_summary_lf = self.load_previous_summary(file.bytes)
+                }
+            };
         }
 
         egui::Panel::top("Menu")
@@ -79,18 +106,13 @@ impl eframe::App for Budgy {
                     ui.menu_button("File", |ui| {
                         ui.set_width(180.0);
 
-                        if ui.button_with_shortcut("Import Statement", CTRL_O) {
-                            self.import_csv();
+                        if ui.button("Load previous summary").clicked() {
+                            self.open_csv_file(LoadedFileType::Summary);
                         }
 
                         if ui.button_with_shortcut("Export Summary", CTRL_E) {
                             self.export_csv();
                         }
-
-                        ui.menu_button("Open Recent", |ui| {
-                            ui.set_min_width(180.0);
-                            self.open_recent(ui);
-                        });
 
                         ui.separator();
 
@@ -100,10 +122,6 @@ impl eframe::App for Budgy {
                     });
                     ui.menu_button("Settings", |ui| {
                         ui.set_width(180.0);
-
-                        if ui.button("Clear recents").clicked() {
-                            self.config.recent.clear();
-                        }
                     });
                     ui.menu_button("Help", |ui| {
                         ui.set_width(180.0);
@@ -138,9 +156,5 @@ impl eframe::App for Budgy {
                     Tabs::Budget => self.display_budget_tab(ui),
                 };
             });
-    }
-
-    fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, APP_KEY, &self.config);
     }
 }

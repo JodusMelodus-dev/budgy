@@ -1,75 +1,49 @@
-use std::fs::File;
+use crate::app::{Budgy, LoadedFileType};
+use polars::lazy::{
+        dsl::col,
+        frame::IntoLazy,
+    };
 
-use egui::Ui;
-use polars::{
-    io::{SerWriter, csv::write::CsvWriter},
-    lazy::{dsl::col, frame::IntoLazy},
-};
-use rfd::FileDialog;
+use crate::app::help::save_file;
 
-use crate::app::Budgy;
+#[cfg(target_arch = "wasm32")]
+pub fn execute<F: std::future::Future<Output = ()> + 'static>(f: F) {
+    wasm_bindgen_futures::spawn_local(f);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn execute<F: std::future::Future<Output = ()> + Send + 'static>(f: F) {
+    std::thread::spawn(move || pollster::block_on(f));
+}
 
 impl Budgy {
-    pub fn import_csv(&mut self) {
-        self.config.statement_path = FileDialog::new()
-            .add_filter("CSV Files", &["csv"])
-            .pick_file();
+    pub fn open_csv_file(&mut self, file_type: LoadedFileType) {
+        let tx = self.tx.clone();
 
-        self.statement_lf = None;
-        self.statement_df = None;
-        self.previous_summary_lf = None;
-
-        if let Some(path) = &self.config.statement_path {
-            if !self.config.recent.contains(path) {
-                self.config.recent.insert(0, path.to_path_buf());
+        execute(async move {
+            if let Some(file) = rfd::AsyncFileDialog::new()
+                .add_filter("CSV Files", &["csv"])
+                .pick_file()
+                .await
+            {
+                let bytes = file.read().await;
+                let _ = tx.send(super::LoadedFile { file_type, bytes });
             }
-        }
+        });
     }
 
     pub fn export_csv(&mut self) {
-        let path = match self.config.statement_path.clone() {
-            Some(mut p) => {
-                p.set_file_name("summary.csv");
-                p
-            }
-            None => FileDialog::new()
-                .set_file_name("summary.csv")
-                .add_filter("CSV Files", &["csv"])
-                .save_file()
-                .expect("No path selected"),
-        };
 
-        let file = File::create(&path).expect("Failed to create file");
+
+        
         if let Some(budget_summary_df) = self.budget_summary.clone() {
             let mut summary = budget_summary_df
-                .lazy()
-                .select([col("Category"), col("Balance")])
-                .collect()
-                .unwrap();
-
-            CsvWriter::new(file)
-                .include_header(true)
-                .with_separator(b',')
-                .finish(&mut summary)
-                .expect("Failed to export file");
+            .lazy()
+            .select([col("Category"), col("Balance")])
+            .collect()
+            .unwrap();
+            save_file("summary.csv".to_string(), &mut summary);
         }
-    }
-
-    pub fn open_recent(&mut self, ui: &mut Ui) {
-        ui.vertical(|ui| {
-            if self.config.recent.is_empty() {
-                ui.label("No recents");
-            } else {
-                for path in &self.config.recent {
-                    if ui
-                        .button(path.file_name().unwrap().to_str().unwrap_or("NULL"))
-                        .clicked()
-                    {
-                        self.config.statement_path = Some(path.to_path_buf());
-                    }
-                }
-            }
-        });
     }
 
     pub fn open_help(&self) {

@@ -1,13 +1,9 @@
 use polars::{chunked_array::ops::SortMultipleOptions, lazy::dsl::col};
 
-use crate::app::{Budgy, help::load_previous_summary};
+use crate::app::Budgy;
 
 impl Budgy {
     pub fn display_budget_summary_tab(&mut self, ui: &mut egui::Ui) {
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |_ui| {});
-
-        ui.separator();
-
         if let Some(df) = &self.budget_summary {
             self.display_dataframe(ui, df);
         } else if let Some(mut summary) = self.previous_summary_lf.clone() {
@@ -39,13 +35,15 @@ impl Budgy {
                         .ok();
                 } else {
                     ui.heading("Missing budget");
+                    log::warn!("Missing budget LazyFrame");
                 }
             } else {
                 ui.heading("Missing statement");
+                log::warn!("Missing statement LazyFrame");
             }
         } else {
-            ui.heading("Loading previous summary");
-            self.previous_summary_lf = load_previous_summary();
+            ui.heading("Missing previous summary");
+            log::warn!("Missing budget summary or previous summary");
         }
     }
 }

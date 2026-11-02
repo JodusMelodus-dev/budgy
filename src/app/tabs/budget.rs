@@ -1,12 +1,7 @@
-use std::{fs::File, path::PathBuf};
-
 use egui::Align;
-use polars::{
-    frame::{DataFrame, column::Column},
-    io::{SerWriter, csv::write::CsvWriter},
-};
+use polars::frame::{DataFrame, column::Column};
 
-use crate::app::{Budgy, help::load_budget};
+use crate::app::{Budgy, LoadedFileType, help::save_file};
 
 impl Budgy {
     pub fn display_budget_tab(&mut self, ui: &mut egui::Ui) {
@@ -22,7 +17,6 @@ impl Budgy {
                 }
             });
         });
-
         ui.separator();
 
         if let Some(df) = &self.budget_df {
@@ -84,7 +78,9 @@ impl Budgy {
                 }
             }
         } else {
-            self.budget_lf = load_budget();
+            if ui.button("Import budget").clicked() {
+                self.open_csv_file(LoadedFileType::Budget);
+            }
         }
     }
 
@@ -103,12 +99,6 @@ impl Budgy {
         ])
         .unwrap();
 
-        let path = PathBuf::from("budget.csv");
-        let file = File::create(path).unwrap();
-        CsvWriter::new(file)
-            .include_header(true)
-            .with_separator(b',')
-            .finish(&mut table)
-            .unwrap();
+        save_file("budget.csv".to_string(), &mut table);
     }
 }
