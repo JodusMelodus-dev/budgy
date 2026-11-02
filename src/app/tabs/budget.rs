@@ -6,7 +6,7 @@ use polars::{
     io::{SerWriter, csv::write::CsvWriter},
 };
 
-use crate::app::{Budgy, menu::execute};
+use crate::app::{Budgy, LoadedFileType};
 
 impl Budgy {
     pub fn display_budget_tab(&mut self, ui: &mut egui::Ui) {
@@ -22,7 +22,6 @@ impl Budgy {
                 }
             });
         });
-
         ui.separator();
 
         if let Some(df) = &self.budget_df {
@@ -84,13 +83,9 @@ impl Budgy {
                 }
             }
         } else {
-            execute(async move {
-                rfd::AsyncMessageDialog::default()
-                    .set_title("Error")
-                    .set_description("No budget")
-                    .show()
-                    .await;
-            });
+            if ui.button("Import budget").clicked() {
+                self.open_csv_file(LoadedFileType::Budget);
+            }
         }
     }
 

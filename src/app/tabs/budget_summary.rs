@@ -1,6 +1,6 @@
 use polars::{chunked_array::ops::SortMultipleOptions, lazy::dsl::col};
 
-use crate::app::{Budgy, menu::execute};
+use crate::app::Budgy;
 
 impl Budgy {
     pub fn display_budget_summary_tab(&mut self, ui: &mut egui::Ui) {
@@ -44,13 +44,7 @@ impl Budgy {
                 ui.heading("Missing statement");
             }
         } else {
-            execute(async move {
-                rfd::AsyncMessageDialog::new()
-                    .set_title("Error")
-                    .set_description("Failed to load summary")
-                    .show()
-                    .await;
-            });
+            ui.heading("Missing previous summary");
         }
     }
 }

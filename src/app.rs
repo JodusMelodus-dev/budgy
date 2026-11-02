@@ -4,9 +4,7 @@ mod menu;
 mod tabs;
 mod ui;
 
-use std::{
-    sync::mpsc::{Receiver, Sender, channel},
-};
+use std::sync::mpsc::{Receiver, Sender, channel};
 
 use egui::{Color32, Frame, Key, KeyboardShortcut, Modifiers, ViewportCommand};
 use polars::{frame::DataFrame, lazy::frame::LazyFrame};
@@ -27,6 +25,7 @@ const ALT_F4: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::F4);
 pub enum LoadedFileType {
     Budget,
     Statement,
+    Summary,
 }
 
 pub struct LoadedFile {
@@ -101,6 +100,9 @@ impl eframe::App for Budgy {
             match file.file_type {
                 LoadedFileType::Budget => self.budget_lf = load_budget(file.bytes),
                 LoadedFileType::Statement => self.statement_lf = load_statement(file.bytes),
+                LoadedFileType::Summary => {
+                    self.previous_summary_lf = self.load_previous_summary(file.bytes)
+                }
             };
         }
 
@@ -112,12 +114,8 @@ impl eframe::App for Budgy {
                     ui.menu_button("File", |ui| {
                         ui.set_width(180.0);
 
-                        if ui.button("Open budget").clicked() {
-                            self.open_csv_file(LoadedFileType::Budget);
-                        }
-
-                        if ui.button_with_shortcut("Import Statement", CTRL_O) {
-                            self.open_csv_file(LoadedFileType::Statement);
+                        if ui.button("Load previous summary").clicked() {
+                            self.open_csv_file(LoadedFileType::Summary);
                         }
 
                         if ui.button_with_shortcut("Export Summary", CTRL_E) {

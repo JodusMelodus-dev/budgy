@@ -1,5 +1,5 @@
 use core::panic;
-use std::{fs::File, io::Cursor};
+use std::io::Cursor;
 
 use polars::{
     frame::{DataFrame, column::Column},
@@ -16,7 +16,7 @@ use polars::{
     },
 };
 
-use crate::app::Budgy;
+use crate::app::{Budgy, menu::execute};
 
 pub fn load_statement(bytes: Vec<u8>) -> Option<LazyFrame> {
     let mut data = CsvReadOptions::default()
@@ -66,8 +66,6 @@ pub fn load_budget(bytes: Vec<u8>) -> Option<LazyFrame> {
 impl Budgy {
     pub fn load_previous_summary(&self, bytes: Vec<u8>) -> Option<LazyFrame> {
         let summary = if bytes.is_empty() {
-            let file = File::create("summary.csv").expect("Failed to create blank summary");
-
             if let Some(budget) = &self.budget_df {
                 let categories = budget.column("Category").unwrap();
 
@@ -77,11 +75,23 @@ impl Budgy {
                 ])
                 .expect("Failed to create blank summary");
 
-                CsvWriter::new(file)
+                let mut buf = Vec::new();
+                CsvWriter::new(&mut buf)
                     .include_header(true)
                     .with_separator(b',')
                     .finish(&mut blank_summary)
                     .expect("Failed to save blank summary");
+
+                execute(async move {
+                    if let Some(file) = rfd::AsyncFileDialog::new()
+                        .set_file_name("summary.csv")
+                        .add_filter("CSV", &["csv"])
+                        .save_file()
+                        .await
+                    {
+                        file.write(&buf).await.unwrap();
+                    }
+                });
 
                 blank_summary.lazy()
             } else {
