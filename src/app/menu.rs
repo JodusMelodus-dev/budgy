@@ -1,4 +1,10 @@
 use crate::app::{Budgy, LoadedFileType};
+use polars::lazy::{
+        dsl::col,
+        frame::IntoLazy,
+    };
+
+use crate::app::help::save_file;
 
 #[cfg(target_arch = "wasm32")]
 pub fn execute<F: std::future::Future<Output = ()> + 'static>(f: F) {
@@ -27,33 +33,17 @@ impl Budgy {
     }
 
     pub fn export_csv(&mut self) {
-        todo!("Export not implemented for web yet");
-        // let path = match self.config.statement_path.clone() {
-        //     Some(mut p) => {
-        //         p.set_file_name("summary.csv");
-        //         p
-        //     }
-        //     None => FileDialog::new()
-        //         .set_file_name("summary.csv")
-        //         .add_filter("CSV Files", &["csv"])
-        //         .save_file()
-        //         .expect("No path selected"),
-        // };
 
-        // let file = File::create(&path).expect("Failed to create file");
-        // if let Some(budget_summary_df) = self.budget_summary.clone() {
-        //     let mut summary = budget_summary_df
-        //         .lazy()
-        //         .select([col("Category"), col("Balance")])
-        //         .collect()
-        //         .unwrap();
 
-        //     CsvWriter::new(file)
-        //         .include_header(true)
-        //         .with_separator(b',')
-        //         .finish(&mut summary)
-        //         .expect("Failed to export file");
-        // }
+        
+        if let Some(budget_summary_df) = self.budget_summary.clone() {
+            let mut summary = budget_summary_df
+            .lazy()
+            .select([col("Category"), col("Balance")])
+            .collect()
+            .unwrap();
+            save_file("summary.csv".to_string(), &mut summary);
+        }
     }
 
     pub fn open_help(&self) {
