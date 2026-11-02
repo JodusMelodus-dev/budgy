@@ -6,7 +6,7 @@ use polars::{
     io::{SerWriter, csv::write::CsvWriter},
 };
 
-use crate::app::{Budgy, help::load_budget};
+use crate::app::{Budgy, menu::execute};
 
 impl Budgy {
     pub fn display_budget_tab(&mut self, ui: &mut egui::Ui) {
@@ -84,7 +84,13 @@ impl Budgy {
                 }
             }
         } else {
-            self.budget_lf = load_budget();
+            execute(async move {
+                rfd::AsyncMessageDialog::default()
+                    .set_title("Error")
+                    .set_description("No budget")
+                    .show()
+                    .await;
+            });
         }
     }
 

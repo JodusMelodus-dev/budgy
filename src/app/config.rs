@@ -1,21 +1,14 @@
-use std::path::PathBuf;
-
 use egui::Color32;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
-    pub recent: Vec<PathBuf>,
-    pub statement_path: Option<PathBuf>,
     pub categories: Vec<(String, Color32)>,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            recent: Vec::new(),
-            statement_path: None,
-
             categories: vec![
                 ("Salary".to_string(), Color32::from_hex("#5B643E").unwrap()),
                 (

@@ -5,14 +5,11 @@ mod app;
 mod extra_ui;
 
 use eframe::APP_KEY;
-use std::env;
 
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`)
-
-    let args = env::args().collect::<Vec<String>>();
 
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_icon(
@@ -30,7 +27,7 @@ fn main() -> eframe::Result {
                 .storage
                 .and_then(|storage| eframe::get_value(storage, APP_KEY))
                 .unwrap_or_default();
-            Ok(Box::new(app::Budgy::new(config, args.get(1).cloned())))
+            Ok(Box::new(app::Budgy::new(config)))
         }),
     )
 }
@@ -66,7 +63,7 @@ fn main() {
                         .storage
                         .and_then(|storage| eframe::get_value(storage, APP_KEY))
                         .unwrap_or_default();
-                    Ok(Box::new(app::Budgy::new(config, None)))
+                    Ok(Box::new(app::Budgy::new(config)))
                 }),
             )
             .await;

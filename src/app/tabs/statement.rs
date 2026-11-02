@@ -1,7 +1,6 @@
-use help::load_statement;
 use polars::datatypes::AnyValue;
 
-use crate::app::{Budgy, help};
+use crate::app::Budgy;
 
 impl Budgy {
     pub fn display_statement_tab(&mut self, ui: &mut egui::Ui) {
@@ -50,8 +49,6 @@ impl Budgy {
                 lf.collect()
                     .expect("Failed to collect statement lazy frame"),
             );
-        } else if let Some(path) = &self.config.statement_path {
-            self.statement_lf = load_statement(path);
         } else {
             ui.heading("Open a statement to get started");
         }

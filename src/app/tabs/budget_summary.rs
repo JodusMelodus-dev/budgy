@@ -1,6 +1,6 @@
 use polars::{chunked_array::ops::SortMultipleOptions, lazy::dsl::col};
 
-use crate::app::{Budgy, help::load_previous_summary};
+use crate::app::{Budgy, menu::execute};
 
 impl Budgy {
     pub fn display_budget_summary_tab(&mut self, ui: &mut egui::Ui) {
@@ -44,8 +44,13 @@ impl Budgy {
                 ui.heading("Missing statement");
             }
         } else {
-            ui.heading("Loading previous summary");
-            self.previous_summary_lf = load_previous_summary();
+            execute(async move {
+                rfd::AsyncMessageDialog::new()
+                    .set_title("Error")
+                    .set_description("Failed to load summary")
+                    .show()
+                    .await;
+            });
         }
     }
 }

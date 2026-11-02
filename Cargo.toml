@@ -16,7 +16,6 @@ egui = "0.36.0"
 eframe = { version = "0.36.0", features = ["persistence"] }
 egui_extras = { version = "0.36.0", features = ["serde"] }
 log = "0.4.27"
-
 serde = { version = "1.0.219", features = ["derive"] }
 polars = { version = "0.44", default-features = false, features = [
     "lazy",
@@ -36,6 +35,7 @@ webbrowser = "1.2.6"
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11.8"
+pollster = "1.0.1"
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
