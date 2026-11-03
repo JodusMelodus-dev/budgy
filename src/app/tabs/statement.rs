@@ -35,7 +35,7 @@ impl Budgy {
                                                 let value =
                                                     column.get(row_idx).unwrap_or(AnyValue::Null);
 
-                                                ui.label(format!("{}", value));
+                                                ui.label(format!("{value}"));
                                             }
                                         });
                                     }
@@ -49,10 +49,8 @@ impl Budgy {
                 lf.collect()
                     .expect("Failed to collect statement lazy frame"),
             );
-        } else {
-            if ui.button("Import statement").clicked() {
-                self.open_csv_file(LoadedFileType::Statement);
-            }
+        } else if ui.button("Import statement").clicked() {
+            self.open_csv_file(LoadedFileType::Statement);
         }
     }
 }

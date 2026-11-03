@@ -1,5 +1,5 @@
 use crate::app::{Budgy, LoadedFileType};
-use polars::lazy::{dsl::col, frame::IntoLazy};
+use polars::lazy::{dsl::col, frame::IntoLazy as _};
 
 use crate::app::help::save_file;
 
@@ -14,7 +14,7 @@ pub fn execute<F: std::future::Future<Output = ()> + Send + 'static>(f: F) {
 }
 
 impl Budgy {
-    pub fn open_csv_file(&mut self, file_type: LoadedFileType) {
+    pub fn open_csv_file(&self, file_type: LoadedFileType) {
         let tx = self.tx.clone();
 
         execute(async move {
@@ -24,23 +24,31 @@ impl Budgy {
                 .await
             {
                 let bytes = file.read().await;
-                let _ = tx.send(super::LoadedFile { file_type, bytes });
+                if let Err(e) = tx.send(super::LoadedFile { file_type, bytes }) {
+                    log::error!("Failed to send loaded file data: {e}");
+                }
             }
         });
     }
 
-    pub fn export_csv(&mut self) {
+    pub fn export_csv(&self) {
         if let Some(budget_summary_df) = self.budget_summary.clone() {
-            let mut summary = budget_summary_df
+            let Some(mut summary) = budget_summary_df
                 .lazy()
                 .select([col("Category"), col("Balance")])
                 .collect()
-                .unwrap();
-            save_file("summary.csv".to_string(), &mut summary);
+                .ok()
+            else {
+                log::error!("Failed to serialize CSV file");
+                return;
+            };
+            save_file("summary.csv".to_owned(), &mut summary);
         }
     }
 
-    pub fn open_help(&self) {
-        webbrowser::open("https://jodusmelodus-dev.github.io/budgy/").unwrap();
+    pub fn open_help() {
+        if let Err(e) = webbrowser::open("https://jodusmelodus-dev.github.io/budgy/") {
+            log::error!("Failed to open web link: {e}");
+        }
     }
 }

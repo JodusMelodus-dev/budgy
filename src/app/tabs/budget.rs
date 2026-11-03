@@ -7,7 +7,7 @@ impl Budgy {
     pub fn display_budget_tab(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             if ui.button("Add Row").clicked() {
-                self.budget_deltas.push(("".to_string(), 0.0));
+                self.budget_deltas.push((String::new(), 0.0));
                 self.scroll_budget_to_bottom = true;
             }
 
@@ -44,7 +44,7 @@ impl Budgy {
                             }
                         })
                         .body(|body| {
-                            if self.budget_deltas.len() > 0 {
+                            if !self.budget_deltas.is_empty() {
                                 body.rows(22.0, self.budget_deltas.len(), |mut row| {
                                     let row_idx = row.index();
 
@@ -66,25 +66,55 @@ impl Budgy {
         } else if let Some(lf) = self.budget_lf.clone() {
             self.budget_df = Some(lf.collect().expect("Failed to collect budget lazy frame"));
 
-            if let Some(df) = &self.budget_df {
-                let categories = df.column("Category").unwrap().str().unwrap();
-                let budget_amounts = df.column("Budget Amount").unwrap().f64().unwrap();
+            let Some(df) = &self.budget_df else {
+                log::error!("No budget data frame");
+                return;
+            };
 
-                for i in 0..df.height() {
-                    let category = categories.get(i).unwrap_or("").to_string();
-                    let budget_amount = budget_amounts.get(i).unwrap_or(0.0);
-
-                    self.budget_deltas.push((category, budget_amount));
+            let categories = match df.column("Category") {
+                Ok(c) => c,
+                Err(e) => {
+                    log::error!("Failed to get Category column: {e}");
+                    return;
                 }
+            };
+
+            let categories = match categories.str() {
+                Ok(c) => c,
+                Err(e) => {
+                    log::error!("Failed to convert category to string: {e}");
+                    return;
+                }
+            };
+
+            let budget_amounts = match df.column("Budget Amount") {
+                Ok(b) => b,
+                Err(e) => {
+                    log::error!("Failed to get Budget Amount column: {e}");
+                    return;
+                }
+            };
+
+            let budget_amounts = match budget_amounts.f64() {
+                Ok(b) => b,
+                Err(e) => {
+                    log::error!("Failed to convert Budget Amount to float: {e}");
+                    return;
+                }
+            };
+
+            for i in 0..df.height() {
+                let category = categories.get(i).unwrap_or("").to_owned();
+                let budget_amount = budget_amounts.get(i).unwrap_or(0.0);
+
+                self.budget_deltas.push((category, budget_amount));
             }
-        } else {
-            if ui.button("Import budget").clicked() {
-                self.open_csv_file(LoadedFileType::Budget);
-            }
+        } else if ui.button("Import budget").clicked() {
+            self.open_csv_file(LoadedFileType::Budget);
         }
     }
 
-    fn save_updated_budget(&mut self) {
+    fn save_updated_budget(&self) {
         let mut categories = Vec::with_capacity(self.budget_deltas.len());
         let mut budget_amounts = Vec::with_capacity(self.budget_deltas.len());
 
@@ -93,12 +123,20 @@ impl Budgy {
             budget_amounts.push(budget_amount);
         }
 
-        let mut table = DataFrame::new(vec![
+        let table = DataFrame::new(vec![
             Column::new("Category".into(), categories),
             Column::new("Budget Amount".into(), budget_amounts),
         ])
-        .unwrap();
+        .inspect_err(|e| log::error!("Failed to create blank budget: {e}"))
+        .ok();
 
-        save_file("budget.csv".to_string(), &mut table);
+        if let Some(mut df) = table {
+            save_file("budget.csv".to_owned(), &mut df);
+        } else {
+            rfd::MessageDialog::new()
+                .set_title("Eror")
+                .set_description("Failed to create blank budget")
+                .show();
+        }
     }
 }

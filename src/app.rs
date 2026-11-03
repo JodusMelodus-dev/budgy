@@ -13,10 +13,9 @@ use crate::{
         help::{load_budget, load_statement},
         tabs::Tabs,
     },
-    extra_ui::ExtraUi,
+    extra_ui::ExtraUi as _,
 };
 
-const CTRL_O: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::O);
 const CTRL_E: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::E);
 const ALT_F4: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::F4);
 
@@ -80,10 +79,6 @@ impl Budgy {
 
 impl eframe::App for Budgy {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        if ui.ctx().input_mut(|i| i.consume_shortcut(&CTRL_O)) {
-            // self.open_csv_file();
-            todo!("IDK");
-        }
         if ui.ctx().input_mut(|i| i.consume_shortcut(&CTRL_E)) {
             self.export_csv();
         }
@@ -93,9 +88,9 @@ impl eframe::App for Budgy {
                 LoadedFileType::Budget => self.budget_lf = load_budget(file.bytes),
                 LoadedFileType::Statement => self.statement_lf = load_statement(file.bytes),
                 LoadedFileType::Summary => {
-                    self.previous_summary_lf = self.load_previous_summary(file.bytes)
+                    self.previous_summary_lf = self.load_previous_summary(file.bytes);
                 }
-            };
+            }
         }
 
         egui::Panel::top("Menu")
@@ -127,7 +122,7 @@ impl eframe::App for Budgy {
                         ui.set_width(180.0);
 
                         if ui.button("Open Website").clicked() {
-                            self.open_help();
+                            Self::open_help();
                         }
                     });
                 });
@@ -149,12 +144,10 @@ impl eframe::App for Budgy {
                     .outer_margin(5.0)
                     .inner_margin(10.0),
             )
-            .show(ui, |ui| {
-                match self.current_tab {
-                    Tabs::Statement => self.display_statement_tab(ui),
-                    Tabs::BudgetSummary => self.display_budget_summary_tab(ui),
-                    Tabs::Budget => self.display_budget_tab(ui),
-                };
+            .show(ui, |ui| match self.current_tab {
+                Tabs::Statement => self.display_statement_tab(ui),
+                Tabs::BudgetSummary => self.display_budget_summary_tab(ui),
+                Tabs::Budget => self.display_budget_tab(ui),
             });
     }
 }

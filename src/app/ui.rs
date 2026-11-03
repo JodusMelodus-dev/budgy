@@ -3,7 +3,7 @@ use polars::{datatypes::AnyValue, frame::DataFrame};
 use crate::app::Budgy;
 
 impl Budgy {
-    pub fn display_dataframe(&self, ui: &mut egui::Ui, dataframe: &DataFrame) {
+    pub fn display_dataframe(ui: &mut egui::Ui, dataframe: &DataFrame) {
         let height = dataframe.height();
         let column_names = dataframe.get_column_names();
 
@@ -28,7 +28,7 @@ impl Budgy {
                             row.col(|ui| {
                                 if let Ok(column) = dataframe.column(column_name) {
                                     let value = column.get(row_idx).unwrap_or(AnyValue::Null);
-                                    ui.label(format!("{}", value));
+                                    ui.label(format!("{value}"));
                                 }
                             });
                         }

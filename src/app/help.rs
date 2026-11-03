@@ -4,7 +4,7 @@ use std::io::Cursor;
 use polars::{
     frame::{DataFrame, column::Column},
     io::{
-        SerReader, SerWriter,
+        SerReader as _, SerWriter as _,
         csv::{
             read::{CsvParseOptions, CsvReadOptions},
             write::CsvWriter,
@@ -12,7 +12,7 @@ use polars::{
     },
     lazy::{
         dsl::col,
-        frame::{IntoLazy, LazyFrame},
+        frame::{IntoLazy as _, LazyFrame},
     },
 };
 
@@ -65,22 +65,28 @@ pub fn load_budget(bytes: Vec<u8>) -> Option<LazyFrame> {
 
 pub fn save_file(file_name: String, data_frame: &mut DataFrame) {
     let mut buf = Vec::new();
-    CsvWriter::new(Cursor::new(&mut buf))
+    if let Err(e) = CsvWriter::new(Cursor::new(&mut buf))
         .include_header(true)
         .with_separator(b',')
         .finish(data_frame)
-        .unwrap();
+    {
+        log::error!("Failed to serialize CSV: {e}");
+        return;
+    }
 
     execute(async move {
-        if let Some(file) = rfd::AsyncFileDialog::new()
+        let Some(file) = rfd::AsyncFileDialog::new()
             .set_file_name(file_name)
             .add_filter("CSV", &["csv"])
             .save_file()
             .await
-        {
-            file.write(&buf).await.unwrap();
-        } else {
+        else {
             log::error!("Failed to save file");
+            return;
+        };
+
+        if let Err(e) = file.write(&buf).await {
+            log::error!("Failed to write CSV file: {e}");
         }
     });
 }
@@ -97,7 +103,7 @@ impl Budgy {
                 ])
                 .expect("Failed to create blank summary");
 
-                save_file("summary.csv".to_string(), &mut blank_summary);
+                save_file("summary.csv".to_owned(), &mut blank_summary);
 
                 blank_summary.lazy()
             } else {
