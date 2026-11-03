@@ -134,7 +134,7 @@ impl Budgy {
             save_file("budget.csv".to_owned(), &mut df);
         } else {
             rfd::MessageDialog::new()
-                .set_title("Eror")
+                .set_title("Error")
                 .set_description("Failed to create blank budget")
                 .show();
         }

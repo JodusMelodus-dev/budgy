@@ -4,46 +4,51 @@ use crate::app::Budgy;
 
 impl Budgy {
     pub fn display_budget_summary_tab(&mut self, ui: &mut egui::Ui) {
-        if let Some(df) = &self.budget_summary {
-            Self::display_dataframe(ui, df);
-        } else if let Some(mut summary) = self.previous_summary_lf.clone() {
-            if let Some(statement) = self.statement_lf.clone() {
-                if let Some(budget) = self.budget_lf.clone() {
-                    summary = summary.rename(["Balance"], ["Previous Balance"], true);
+        let Some(df) = &mut self.budget_summary else {
+            let Some(mut summary) = self.previous_summary_lf.clone() else {
+                log::error!("Missing previous summary");
+                return;
+            };
 
-                    let mut result = summary.left_join(statement, col("Category"), col("Category"));
+            let Some(statement) = self.statement_lf.clone() else {
+                log::error!("Missing statement");
+                return;
+            };
 
-                    result = result
-                        .group_by([col("Category")])
-                        .agg([
-                            col("Money In").sum(),
-                            col("Money Out").sum(),
-                            col("Fee").sum(),
-                            col("Previous Balance").max(),
-                        ])
-                        .left_join(budget, col("Category"), col("Category"));
+            let Some(budget) = self.budget_lf.clone() else {
+                log::error!("Missing budget");
+                return;
+            };
 
-                    result = result.with_column(
-                        (col("Money In") + col("Money Out") + col("Fee") - col("Budget Amount")
-                            + col("Previous Balance"))
-                        .alias("Balance"),
-                    );
+            summary = summary.rename(["Balance"], ["Previous Balance"], true);
+            let mut result = summary.left_join(statement, col("Category"), col("Category"));
+            result = result
+                .group_by([col("Category")])
+                .agg([
+                    col("Money In").sum(),
+                    col("Money Out").sum(),
+                    col("Fee").sum(),
+                    col("Previous Balance").max(),
+                ])
+                .left_join(budget, col("Category"), col("Category"));
+            result = result.with_column(
+                (col("Money In") + col("Money Out") + col("Fee") - col("Budget Amount")
+                    + col("Previous Balance"))
+                .alias("Balance"),
+            );
 
-                    self.budget_summary = result
-                        .sort(["Category"], SortMultipleOptions::default())
-                        .collect()
-                        .ok();
-                } else {
-                    ui.heading("Missing budget");
-                    log::warn!("Missing budget LazyFrame");
-                }
-            } else {
-                ui.heading("Missing statement");
-                log::warn!("Missing statement LazyFrame");
-            }
-        } else {
-            ui.heading("Missing previous summary");
-            log::warn!("Missing budget summary or previous summary");
-        }
+            let Ok(res) = result
+                .sort(["Category"], SortMultipleOptions::default())
+                .collect()
+            else {
+                log::error!("Failed to generate budget summary");
+                return;
+            };
+
+            self.budget_summary = Some(res);
+            return;
+        };
+
+        Self::display_dataframe(ui, df);
     }
 }

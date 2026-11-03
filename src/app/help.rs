@@ -1,4 +1,3 @@
-use core::panic;
 use std::io::Cursor;
 
 use polars::{
@@ -19,15 +18,17 @@ use polars::{
 use crate::app::{Budgy, menu::execute};
 
 pub fn load_statement(bytes: Vec<u8>) -> Option<LazyFrame> {
-    let mut data = CsvReadOptions::default()
+    let Ok(data) = CsvReadOptions::default()
         .with_has_header(true)
         .with_parse_options(CsvParseOptions::default().with_try_parse_dates(true))
         .into_reader_with_file_handle(Cursor::new(bytes))
         .finish()
-        .expect("Failed to load statement")
-        .lazy();
+    else {
+        log::error!("Failed to read CSV statement file");
+        return None;
+    };
 
-    data = data.filter(
+    let data = data.lazy().filter(
         col("Category")
             .is_not_null()
             .and(col("Category").is_not_null()),
@@ -93,31 +94,38 @@ pub fn save_file(file_name: String, data_frame: &mut DataFrame) {
 
 impl Budgy {
     pub fn load_previous_summary(&self, bytes: Vec<u8>) -> Option<LazyFrame> {
-        let summary = if bytes.is_empty() {
-            if let Some(budget) = &self.budget_df {
-                let categories = budget.column("Category").unwrap();
+        if bytes.is_empty() {
+            let Some(budget) = &self.budget_df else {
+                log::error!("No budget lazy frame");
+                return None;
+            };
+            let Ok(categories) = budget.column("Category") else {
+                log::error!("Failed to get Category column in Budget");
+                return None;
+            };
 
-                let mut blank_summary = DataFrame::new(vec![
-                    categories.clone().with_name("Category".into()),
-                    Column::new("Balance".into(), vec![0.0; categories.len()]),
-                ])
-                .expect("Failed to create blank summary");
+            let Ok(mut blank_summary) = DataFrame::new(vec![
+                categories.clone().with_name("Category".into()),
+                Column::new("Balance".into(), vec![0.0; categories.len()]),
+            ]) else {
+                log::error!("Failed to create blank summary");
+                return None;
+            };
 
-                save_file("summary.csv".to_owned(), &mut blank_summary);
-
-                blank_summary.lazy()
-            } else {
-                panic!("ARH");
-            }
+            save_file("summary.csv".to_owned(), &mut blank_summary);
+            Some(blank_summary.lazy())
         } else {
-            CsvReadOptions::default()
+            match CsvReadOptions::default()
                 .with_has_header(true)
                 .into_reader_with_file_handle(Cursor::new(bytes))
                 .finish()
-                .expect("Failed to load previous summary")
-                .lazy()
-        };
-
-        Some(summary)
+            {
+                Ok(df) => Some(df.lazy()),
+                Err(e) => {
+                    log::error!("Failed to read previous summary: {e}");
+                    None
+                }
+            }
+        }
     }
 }

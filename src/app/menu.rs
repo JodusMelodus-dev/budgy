@@ -18,32 +18,38 @@ impl Budgy {
         let tx = self.tx.clone();
 
         execute(async move {
-            if let Some(file) = rfd::AsyncFileDialog::new()
+            let Some(file) = rfd::AsyncFileDialog::new()
                 .add_filter("CSV Files", &["csv"])
                 .pick_file()
                 .await
-            {
-                let bytes = file.read().await;
-                if let Err(e) = tx.send(super::LoadedFile { file_type, bytes }) {
-                    log::error!("Failed to send loaded file data: {e}");
-                }
+            else {
+                log::error!("Failed to read CSV file");
+                return;
+            };
+
+            let bytes = file.read().await;
+            if let Err(e) = tx.send(super::LoadedFile { file_type, bytes }) {
+                log::error!("Failed to send loaded file data: {e}");
             }
         });
     }
 
     pub fn export_csv(&self) {
-        if let Some(budget_summary_df) = self.budget_summary.clone() {
-            let Some(mut summary) = budget_summary_df
-                .lazy()
-                .select([col("Category"), col("Balance")])
-                .collect()
-                .ok()
-            else {
-                log::error!("Failed to serialize CSV file");
-                return;
-            };
-            save_file("summary.csv".to_owned(), &mut summary);
-        }
+        let Some(budget_summary_df) = self.budget_summary.clone() else {
+            log::error!("No budget summary available");
+            return;
+        };
+
+        let Some(mut summary) = budget_summary_df
+            .lazy()
+            .select([col("Category"), col("Balance")])
+            .collect()
+            .ok()
+        else {
+            log::error!("Failed to serialize CSV file");
+            return;
+        };
+        save_file("summary.csv".to_owned(), &mut summary);
     }
 
     pub fn open_help() {
