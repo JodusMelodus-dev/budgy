@@ -1,7 +1,7 @@
 use egui::Align;
 use polars::frame::{DataFrame, column::Column};
 
-use crate::app::{Budgy, LoadedFileType, help::save_file};
+use crate::app::{Budgy, BudgyFileType, file::export_csv, menu::execute};
 
 impl Budgy {
     pub fn display_budget_tab(&mut self, ui: &mut egui::Ui) {
@@ -110,7 +110,7 @@ impl Budgy {
                 self.budget_deltas.push((category, budget_amount));
             }
         } else if ui.button("Import budget").clicked() {
-            self.open_csv_file(LoadedFileType::Budget);
+            self.open_csv_file(BudgyFileType::Budget);
         }
     }
 
@@ -131,7 +131,18 @@ impl Budgy {
         .ok();
 
         if let Some(mut df) = table {
-            save_file("budget.csv".to_owned(), &mut df);
+            execute(async move {
+                if let Some(file) = rfd::AsyncFileDialog::new()
+                    .set_title("Save budget")
+                    .set_file_name("budget.csv")
+                    .save_file()
+                    .await
+                {
+                    export_csv(&file, &mut df)
+                        .await
+                        .expect("Failed to save file");
+                }
+            });
         } else {
             rfd::MessageDialog::new()
                 .set_title("Error")

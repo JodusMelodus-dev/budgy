@@ -1,7 +1,5 @@
-use crate::app::{Budgy, LoadedFileType};
+use crate::app::{Budgy, BudgyFileType, file::export_csv};
 use polars::lazy::{dsl::col, frame::IntoLazy as _};
-
-use crate::app::help::save_file;
 
 #[cfg(target_arch = "wasm32")]
 pub fn execute<F: std::future::Future<Output = ()> + 'static>(f: F) {
@@ -14,7 +12,7 @@ pub fn execute<F: std::future::Future<Output = ()> + Send + 'static>(f: F) {
 }
 
 impl Budgy {
-    pub fn open_csv_file(&self, file_type: LoadedFileType) {
+    pub fn open_csv_file(&self, file_type: BudgyFileType) {
         let tx = self.tx.clone();
 
         execute(async move {
@@ -28,7 +26,7 @@ impl Budgy {
             };
 
             let bytes = file.read().await;
-            if let Err(e) = tx.send(super::LoadedFile { file_type, bytes }) {
+            if let Err(e) = tx.send(super::ImportFile { file_type, bytes }) {
                 log::error!("Failed to send loaded file data: {e}");
             }
         });
@@ -49,7 +47,17 @@ impl Budgy {
             log::error!("Failed to serialize CSV file");
             return;
         };
-        save_file("summary.csv".to_owned(), &mut summary);
+
+        execute(async move {
+            if let Some(file) = rfd::AsyncFileDialog::new()
+                .set_title("Export summary")
+                .set_file_name("summary.csv")
+                .save_file()
+                .await
+            {
+                export_csv(&file, &mut summary).await.expect("Failed to save file");
+            }
+        });
     }
 
     pub fn open_help() {

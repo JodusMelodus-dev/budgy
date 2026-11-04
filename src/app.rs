@@ -1,4 +1,4 @@
-mod help;
+mod file;
 mod menu;
 mod tabs;
 mod ui;
@@ -10,7 +10,7 @@ use polars::{frame::DataFrame, lazy::frame::LazyFrame};
 
 use crate::{
     app::{
-        help::{load_budget, load_statement},
+        file::{BudgyFileType, ImportFile, import_budget, import_statement, import_summary},
         tabs::Tabs,
     },
     extra_ui::ExtraUi as _,
@@ -19,15 +19,9 @@ use crate::{
 const CTRL_E: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::E);
 const ALT_F4: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::F4);
 
-pub enum LoadedFileType {
-    Budget,
-    Statement,
-    Summary,
-}
-
-pub struct LoadedFile {
-    file_type: LoadedFileType,
-    bytes: Vec<u8>,
+#[derive(serde::Serialize, serde::Deserialize, Default)]
+pub struct Budget {
+    rows: Vec<(String, f64)>,
 }
 
 pub struct Budgy {
@@ -47,8 +41,11 @@ pub struct Budgy {
     current_tab: Tabs,
 
     // File picking
-    tx: Sender<LoadedFile>,
-    rx: Receiver<LoadedFile>,
+    tx: Sender<ImportFile>,
+    rx: Receiver<ImportFile>,
+
+    budget: Budget,
+    last_error: Option<String>,
 }
 
 impl Budgy {
@@ -73,6 +70,9 @@ impl Budgy {
 
             tx,
             rx,
+
+            budget: Budget::default(),
+            last_error: None,
         }
     }
 }
@@ -85,10 +85,20 @@ impl eframe::App for Budgy {
 
         while let Ok(file) = self.rx.try_recv() {
             match file.file_type {
-                LoadedFileType::Budget => self.budget_lf = load_budget(file.bytes),
-                LoadedFileType::Statement => self.statement_lf = load_statement(file.bytes),
-                LoadedFileType::Summary => {
-                    self.previous_summary_lf = self.load_previous_summary(file.bytes);
+                BudgyFileType::Budget => {
+                    self.budget_lf = import_budget(file.bytes)
+                        .map_err(|e| self.last_error = Some(e.to_string()))
+                        .ok();
+                }
+                BudgyFileType::Statement => {
+                    self.statement_lf = import_statement(file.bytes)
+                        .map_err(|e| self.last_error = Some(e.to_string()))
+                        .ok();
+                }
+                BudgyFileType::Summary => {
+                    self.previous_summary_lf = import_summary(file.bytes)
+                        .map_err(|e| self.last_error = Some(e.to_string()))
+                        .ok();
                 }
             }
         }
@@ -102,7 +112,7 @@ impl eframe::App for Budgy {
                         ui.set_width(180.0);
 
                         if ui.button("Load previous summary").clicked() {
-                            self.open_csv_file(LoadedFileType::Summary);
+                            self.open_csv_file(BudgyFileType::Summary);
                         }
 
                         if ui.button_with_shortcut("Export Summary", CTRL_E) {

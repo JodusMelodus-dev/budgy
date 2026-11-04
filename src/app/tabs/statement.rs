@@ -1,6 +1,6 @@
 use polars::datatypes::AnyValue;
 
-use crate::app::{Budgy, LoadedFileType};
+use crate::app::{Budgy, BudgyFileType};
 
 impl Budgy {
     pub fn display_statement_tab(&mut self, ui: &mut egui::Ui) {
@@ -50,7 +50,7 @@ impl Budgy {
                     .expect("Failed to collect statement lazy frame"),
             );
         } else if ui.button("Import statement").clicked() {
-            self.open_csv_file(LoadedFileType::Statement);
+            self.open_csv_file(BudgyFileType::Statement);
         }
     }
 }
