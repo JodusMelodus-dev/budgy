@@ -20,7 +20,10 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "Budgy",
         native_options,
-        Box::new(|_cc| Ok(Box::new(app::Budgy::new()))),
+        Box::new(|cc| {
+            egui_extras::install_image_loaders(&cc.egui_ctx);
+            Ok(Box::new(app::Budgy::new()))
+        }),
     )
 }
 
@@ -50,7 +53,10 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|_cc| Ok(Box::new(app::Budgy::new()))),
+                Box::new(|cc| {
+                    egui_extras::install_image_loaders(&cc.egui_ctx);
+                    Ok(Box::new(app::Budgy::new()))
+                }),
             )
             .await;
 

@@ -1,6 +1,6 @@
 use polars::{datatypes::AnyValue, frame::DataFrame};
 
-use crate::app::Budgy;
+use crate::app::{Budgy, tabs::Tabs};
 
 impl Budgy {
     pub fn display_dataframe(ui: &mut egui::Ui, dataframe: &DataFrame) {
@@ -34,6 +34,58 @@ impl Budgy {
                         }
                     });
                 });
+        });
+    }
+
+    pub fn display_navigation_menu(&mut self, ui: &mut egui::Ui) {
+        ui.vertical(|ui| {
+            ui.take_available_width();
+            ui.set_min_width(180.0);
+            ui.spacing_mut().button_padding = egui::vec2(12.0, 3.0);
+
+            let size = egui::vec2(ui.available_width(), 30.0);
+
+            if ui
+                .add_sized(
+                    size,
+                    egui::Button::image_and_text(
+                        egui::include_image!("../../assets/icons/document.svg"),
+                        "Statement",
+                    )
+                    .selected(self.current_tab == Tabs::Statement),
+                )
+                .clicked()
+            {
+                self.current_tab = Tabs::Statement;
+            }
+
+            if ui
+                .add_sized(
+                    size,
+                    egui::Button::image_and_text(
+                        egui::include_image!("../../assets/icons/wallet.svg"),
+                        "Budget",
+                    )
+                    .selected(self.current_tab == Tabs::Budget),
+                )
+                .clicked()
+            {
+                self.current_tab = Tabs::Budget;
+            }
+
+            if ui
+                .add_sized(
+                    size,
+                    egui::Button::image_and_text(
+                        egui::include_image!("../../assets/icons/invoice.svg"),
+                        "Summary",
+                    )
+                    .selected(self.current_tab == Tabs::BudgetSummary),
+                )
+                .clicked()
+            {
+                self.current_tab = Tabs::BudgetSummary;
+            }
         });
     }
 }

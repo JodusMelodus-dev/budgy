@@ -20,3 +20,11 @@
 In your banking app, navigate to your account and look for the `Statement` option or a similar option. Check if there is an option to export a statement as a `CSV` file.
 
 For `Capitec` users, select your `Main Account`, `Savings Plans` or any other account. Click on the `Statement >` button, select a date range (Suggested: Last 1 month), and select the `export CSV` option.
+
+# Attributions
+
+- Home outline Icon by Microsoft on <a href="https://icon-icons.com/authors/1201-microsoft">Icon-Icons.com</a>
+- Credit card approval Icon by Lucide Contributors on <a href="https://icon-icons.com/authors/1565-lucide-contributors">Icon-Icons.com</a>
+- Document bullet list regular Icon by Microsoft on <a href="https://icon-icons.com/authors/1201-microsoft">Icon-Icons.com</a>
+- Invoice Icon by Phosphor on <a href="https://icon-icons.com/authors/1028-phosphor">Icon-Icons.com</a>
+- Wallet Icon by Iconoir on <a href="https://icon-icons.com/authors/1238-iconoir">Icon-Icons.com</a>

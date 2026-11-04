@@ -136,14 +136,18 @@ impl eframe::App for Budgy {
                         }
                     });
                 });
+            });
 
-                ui.separator();
-
-                ui.horizontal(|ui| {
-                    ui.selectable_value(&mut self.current_tab, Tabs::Statement, "Statement");
-                    ui.selectable_value(&mut self.current_tab, Tabs::Budget, "Budget");
-                    ui.selectable_value(&mut self.current_tab, Tabs::BudgetSummary, "Summary");
-                });
+        egui::Panel::left("navigation")
+            .frame(
+                Frame::default()
+                    .fill(Color32::from_rgb(32, 32, 32))
+                    .corner_radius(5.0)
+                    .outer_margin(5.0)
+                    .inner_margin(10.0),
+            )
+            .show(ui, |ui| {
+                self.display_navigation_menu(ui);
             });
 
         egui::CentralPanel::default()
