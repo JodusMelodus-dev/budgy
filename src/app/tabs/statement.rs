@@ -4,6 +4,9 @@ use crate::app::{Budgy, BudgyFileType};
 
 impl Budgy {
     pub fn display_statement_tab(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Statement");
+        ui.separator();
+
         if let Some(df) = &self.statement_df {
             let height = df.height();
             let column_names = df.get_column_names();
@@ -34,7 +37,6 @@ impl Budgy {
                                             if let Ok(column) = df.column(column_name) {
                                                 let value =
                                                     column.get(row_idx).unwrap_or(AnyValue::Null);
-
                                                 ui.label(format!("{value}"));
                                             }
                                         });

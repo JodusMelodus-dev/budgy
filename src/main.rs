@@ -22,7 +22,7 @@ fn main() -> eframe::Result {
         native_options,
         Box::new(|cc| {
             egui_extras::install_image_loaders(&cc.egui_ctx);
-            Ok(Box::new(app::Budgy::new()))
+            Ok(Box::new(app::Budgy::new(cc)))
         }),
     )
 }
@@ -55,7 +55,7 @@ fn main() {
                 web_options,
                 Box::new(|cc| {
                     egui_extras::install_image_loaders(&cc.egui_ctx);
-                    Ok(Box::new(app::Budgy::new()))
+                    Ok(Box::new(app::Budgy::new(cc)))
                 }),
             )
             .await;

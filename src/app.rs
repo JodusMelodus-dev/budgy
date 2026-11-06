@@ -21,7 +21,8 @@ const ALT_F4: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::F4);
 
 #[derive(serde::Serialize, serde::Deserialize, Default)]
 pub struct Budget {
-    rows: Vec<(String, f64)>,
+    categories: Vec<String>,
+    amounts: Vec<f64>,
 }
 
 pub struct Budgy {
@@ -35,9 +36,6 @@ pub struct Budgy {
 
     previous_summary_lf: Option<LazyFrame>,
 
-    budget_deltas: Vec<(String, f64)>,
-    scroll_budget_to_bottom: bool,
-
     current_tab: Tabs,
 
     // File picking
@@ -49,8 +47,13 @@ pub struct Budgy {
 }
 
 impl Budgy {
-    pub fn new() -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let (tx, rx) = channel();
+        let budget = if let Some(storage) = cc.storage {
+            eframe::get_value::<Budget>(storage, "budget").unwrap_or_default()
+        } else {
+            Budget::default()
+        };
 
         Self {
             budget_summary: None,
@@ -63,21 +66,44 @@ impl Budgy {
 
             previous_summary_lf: None,
 
-            budget_deltas: Vec::new(),
-            scroll_budget_to_bottom: false,
-
-            current_tab: Tabs::Statement,
+            current_tab: Tabs::Dashboard,
 
             tx,
             rx,
 
-            budget: Budget::default(),
+            budget,
             last_error: None,
         }
     }
 }
 
 impl eframe::App for Budgy {
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        if let Some(budget_df) = &self.budget_df {
+            let category = budget_df
+                .column("Category")
+                .expect("Failed to get Category column")
+                .str()
+                .expect("Failed to convert to string")
+                .into_iter()
+                .map(|v| v.unwrap_or_default().to_owned())
+                .collect::<Vec<String>>();
+            let budget_amount = budget_df
+                .column("Budget Amount")
+                .expect("Failed to get Category column")
+                .f64()
+                .expect("Failed to convert to float")
+                .into_iter()
+                .map(|v| v.unwrap_or_default())
+                .collect::<Vec<f64>>();
+
+            self.budget.categories = category;
+            self.budget.amounts = budget_amount;
+
+            eframe::set_value(storage, "budget", &self.budget);
+        }
+    }
+
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         if ui.ctx().input_mut(|i| i.consume_shortcut(&CTRL_E)) {
             self.export_csv();
@@ -161,7 +187,9 @@ impl eframe::App for Budgy {
             .show(ui, |ui| match self.current_tab {
                 Tabs::Statement => self.display_statement_tab(ui),
                 Tabs::BudgetSummary => self.display_budget_summary_tab(ui),
-                Tabs::Budget => self.display_budget_tab(ui),
+                Tabs::Budget => self.display_budget_tab(ui).unwrap(),
+                Tabs::Dashboard => self.display_dashboard(ui),
+                Tabs::Settings => self.display_settings(ui),
             });
     }
 }

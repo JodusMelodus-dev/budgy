@@ -4,6 +4,9 @@ use crate::app::Budgy;
 
 impl Budgy {
     pub fn display_budget_summary_tab(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Summary");
+        ui.separator();
+
         let Some(df) = &mut self.budget_summary else {
             let Some(mut summary) = self.previous_summary_lf.clone() else {
                 log::error!("Missing previous summary");

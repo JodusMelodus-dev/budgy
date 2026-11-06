@@ -49,6 +49,20 @@ impl Budgy {
                 .add_sized(
                     size,
                     egui::Button::image_and_text(
+                        egui::include_image!("../../assets/icons/home.svg"),
+                        "Dashboard",
+                    )
+                    .selected(self.current_tab == Tabs::Dashboard),
+                )
+                .clicked()
+            {
+                self.current_tab = Tabs::Dashboard;
+            }
+
+            if ui
+                .add_sized(
+                    size,
+                    egui::Button::image_and_text(
                         egui::include_image!("../../assets/icons/document.svg"),
                         "Statement",
                     )
@@ -85,6 +99,20 @@ impl Budgy {
                 .clicked()
             {
                 self.current_tab = Tabs::BudgetSummary;
+            }
+
+            if ui
+                .add_sized(
+                    size,
+                    egui::Button::image_and_text(
+                        egui::include_image!("../../assets/icons/document.svg"),
+                        "Settings",
+                    )
+                    .selected(self.current_tab == Tabs::Settings),
+                )
+                .clicked()
+            {
+                self.current_tab = Tabs::Settings;
             }
         });
     }
