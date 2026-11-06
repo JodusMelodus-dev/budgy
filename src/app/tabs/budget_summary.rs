@@ -1,26 +1,23 @@
 use polars::{chunked_array::ops::SortMultipleOptions, lazy::dsl::col};
 
-use crate::app::Budgy;
+use crate::app::{Budgy, BudgyError};
 
 impl Budgy {
-    pub fn display_budget_summary_tab(&mut self, ui: &mut egui::Ui) {
+    pub fn display_budget_summary_tab(&mut self, ui: &mut egui::Ui) -> Result<(), BudgyError> {
         ui.heading("Summary");
         ui.separator();
 
         let Some(df) = &mut self.budget_summary else {
             let Some(mut summary) = self.previous_summary_lf.clone() else {
-                log::error!("Missing previous summary");
-                return;
+                return Err(BudgyError::Frame("Missing previous summary".to_owned()));
             };
 
             let Some(statement) = self.statement_lf.clone() else {
-                log::error!("Missing statement");
-                return;
+                return Err(BudgyError::Frame("Missing statement".to_owned()));
             };
 
             let Some(budget) = self.budget_lf.clone() else {
-                log::error!("Missing budget");
-                return;
+                return Err(BudgyError::Frame("Missing budget".to_owned()));
             };
 
             summary = summary.rename(["Balance"], ["Previous Balance"], true);
@@ -40,18 +37,14 @@ impl Budgy {
                 .alias("Balance"),
             );
 
-            let Ok(res) = result
+            let res = result
                 .sort(["Category"], SortMultipleOptions::default())
-                .collect()
-            else {
-                log::error!("Failed to generate budget summary");
-                return;
-            };
-
+                .collect()?;
             self.budget_summary = Some(res);
-            return;
+            return Ok(());
         };
 
         Self::display_dataframe(ui, df);
+        Ok(())
     }
 }

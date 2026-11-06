@@ -1,8 +1,9 @@
-use crate::app::Budgy;
+use crate::app::{Budgy, BudgyError};
 
 impl Budgy {
-    pub fn display_dashboard(&mut self, ui: &mut egui::Ui) {
+    pub fn display_dashboard(&self, ui: &mut egui::Ui) -> Result<(), BudgyError> {
         ui.heading("Dashboard");
         ui.separator();
+        Ok(())
     }
 }

@@ -1,19 +1,12 @@
 use polars::{
-    datatypes::AnyValue, error::PolarsError, frame::DataFrame, lazy::frame::IntoLazy as _,
-    prelude::NamedFrom as _, series::Series,
+    datatypes::AnyValue, frame::DataFrame, lazy::frame::IntoLazy as _, prelude::NamedFrom as _,
+    series::Series,
 };
-use thiserror::Error;
 
-use crate::app::Budgy;
-
-#[derive(Debug, Error)]
-pub enum BudgyBudgetError {
-    #[error("Polars failed")]
-    Polars(#[from] PolarsError),
-}
+use crate::app::{Budgy, BudgyError};
 
 impl Budgy {
-    pub fn display_budget_tab(&mut self, ui: &mut egui::Ui) -> Result<(), BudgyBudgetError> {
+    pub fn display_budget_tab(&mut self, ui: &mut egui::Ui) -> Result<(), BudgyError> {
         ui.heading("Budget");
         ui.separator();
 

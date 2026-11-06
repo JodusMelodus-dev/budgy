@@ -6,7 +6,8 @@ mod ui;
 use std::sync::mpsc::{Receiver, Sender, channel};
 
 use egui::{Color32, Frame, Key, KeyboardShortcut, Modifiers, ViewportCommand};
-use polars::{frame::DataFrame, lazy::frame::LazyFrame};
+use polars::{error::PolarsError, frame::DataFrame, lazy::frame::LazyFrame};
+use thiserror::Error;
 
 use crate::{
     app::{
@@ -18,6 +19,14 @@ use crate::{
 
 const CTRL_E: KeyboardShortcut = KeyboardShortcut::new(Modifiers::CTRL, Key::E);
 const ALT_F4: KeyboardShortcut = KeyboardShortcut::new(Modifiers::ALT, Key::F4);
+
+#[derive(Debug, Error)]
+pub enum BudgyError {
+    #[error("Polars failed")]
+    Polars(#[from] PolarsError),
+    #[error("No DataFrame/LazyFrame")]
+    Frame(String),
+}
 
 #[derive(serde::Serialize, serde::Deserialize, Default)]
 pub struct Budget {
@@ -184,12 +193,19 @@ impl eframe::App for Budgy {
                     .outer_margin(5.0)
                     .inner_margin(10.0),
             )
-            .show(ui, |ui| match self.current_tab {
-                Tabs::Statement => self.display_statement_tab(ui),
-                Tabs::BudgetSummary => self.display_budget_summary_tab(ui),
-                Tabs::Budget => self.display_budget_tab(ui).unwrap(),
-                Tabs::Dashboard => self.display_dashboard(ui),
-                Tabs::Settings => self.display_settings(ui),
+            .show(ui, |ui| {
+                if let Err(e) = match self.current_tab {
+                    Tabs::Statement => self.display_statement_tab(ui),
+                    Tabs::BudgetSummary => self.display_budget_summary_tab(ui),
+                    Tabs::Budget => self.display_budget_tab(ui),
+                    Tabs::Dashboard => self.display_dashboard(ui),
+                    Tabs::Settings => self.display_settings(ui),
+                } {
+                    match e {
+                        BudgyError::Polars(e) => log::error!("Polars Error: {e}"),
+                        BudgyError::Frame(e) => log::error!("Missing Frame: {e}"),
+                    }
+                }
             });
     }
 }

@@ -1,9 +1,9 @@
 use polars::datatypes::AnyValue;
 
-use crate::app::{Budgy, BudgyFileType};
+use crate::app::{Budgy, BudgyError, BudgyFileType};
 
 impl Budgy {
-    pub fn display_statement_tab(&mut self, ui: &mut egui::Ui) {
+    pub fn display_statement_tab(&mut self, ui: &mut egui::Ui) -> Result<(), BudgyError> {
         ui.heading("Statement");
         ui.separator();
 
@@ -54,5 +54,7 @@ impl Budgy {
         } else if ui.button("Import statement").clicked() {
             self.open_csv_file(BudgyFileType::Statement);
         }
+
+        Ok(())
     }
 }
