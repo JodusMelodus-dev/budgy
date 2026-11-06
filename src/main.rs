@@ -11,7 +11,7 @@ fn main() -> eframe::Result {
 
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_icon(
-            eframe::icon_data::from_png_bytes(&include_bytes!("../assets/favicon-512x512.png")[..])
+            eframe::icon_data::from_png_bytes(&include_bytes!("../assets/web-app-manifest-512x512.png")[..])
                 .expect("Failed to load icon"),
         ),
         ..Default::default()
