@@ -1,11 +1,24 @@
 [package]
 name = "budgy"
 version = "0.1.0-alpha.2"
+description = "The you're-in-control budgeting app"
 authors = ["JodusMelodus"]
 edition = "2024"
 license = "MIT"
 include = ["LICENSE.md", "**/*.rs", "Cargo.toml"]
 rust-version = "1.95"
+
+[package.metadata.packager]
+product-name = "Budgy"
+identifier = "com.jodusmelodus.budgy"
+icons = ["assets/favicon.ico"]
+formats = ["nsis"]
+out-dir = "dist"
+before-packaging-command = "cargo build --release"
+license-file = "LICENSE.md"
+
+[package.metadata.packager.nsis]
+installer-mode = "currentUser"
 
 [package.metadata.docs.rs]
 all-features = true
