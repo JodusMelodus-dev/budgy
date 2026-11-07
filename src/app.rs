@@ -5,7 +5,7 @@ mod ui;
 
 use std::sync::mpsc::{Receiver, Sender, channel};
 
-use egui::{Color32, Frame, Key, KeyboardShortcut, Modifiers, Theme, ViewportCommand};
+use egui::{Color32, Frame, Key, KeyboardShortcut, Modifiers, ViewportCommand, vec2};
 use polars::{error::PolarsError, frame::DataFrame, lazy::frame::LazyFrame};
 use thiserror::Error;
 
@@ -147,8 +147,11 @@ impl eframe::App for Budgy {
             .show_separator_line(false)
             .show(ui, |ui| {
                 egui::MenuBar::new().ui(ui, |ui| {
+                    ui.spacing_mut().button_padding = vec2(8.0, 4.0);
+
                     ui.menu_button("File", |ui| {
                         ui.set_width(180.0);
+                        ui.spacing_mut().button_padding = vec2(8.0, 4.0);
 
                         if ui.button("Load previous summary").clicked() {
                             self.open_csv_file(BudgyFileType::Summary);
@@ -164,14 +167,13 @@ impl eframe::App for Budgy {
                             ui.send_viewport_cmd(ViewportCommand::Close);
                         }
                     });
-                    ui.menu_button("Settings", |ui| {
-                        ui.set_width(180.0);
-                    });
+                    
                     ui.menu_button("Help", |ui| {
                         ui.set_width(180.0);
+                        ui.spacing_mut().button_padding = vec2(8.0, 4.0);
 
-                        if ui.button("Open Website").clicked() {
-                            Self::open_help();
+                        if ui.button("Open WebApp").clicked() {
+                            Self::open_web_app();
                         }
                     });
                 });

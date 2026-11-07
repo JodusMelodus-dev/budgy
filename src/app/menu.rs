@@ -55,12 +55,14 @@ impl Budgy {
                 .save_file()
                 .await
             {
-                export_csv(&file, &mut summary).await.expect("Failed to save file");
+                export_csv(&file, &mut summary)
+                    .await
+                    .expect("Failed to save file");
             }
         });
     }
 
-    pub fn open_help() {
+    pub fn open_web_app() {
         if let Err(e) = webbrowser::open("https://jodusmelodus-dev.github.io/budgy/") {
             log::error!("Failed to open web link: {e}");
         }

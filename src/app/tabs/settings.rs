@@ -10,14 +10,14 @@ impl Budgy {
         ui.separator();
 
         ui.horizontal(|ui| {
-            ui.vertical(|ui| {
-                ui.heading("Import Budget");
-                ui.label("Import your existing budget from a .csv file");
-            });
-            ui.with_layout(Layout::right_to_left(Align::RIGHT), |ui| {
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 if ui.button("Import").clicked() {
                     self.open_csv_file(BudgyFileType::Budget);
                 }
+                ui.vertical(|ui| {
+                    ui.heading("Import Budget");
+                    ui.label("Import your existing budget from a .csv file");
+                });
             });
         });
 
