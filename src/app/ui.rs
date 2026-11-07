@@ -1,3 +1,4 @@
+use egui::{Align, Layout, vec2};
 use polars::{datatypes::AnyValue, frame::DataFrame};
 
 use crate::app::{Budgy, tabs::Tabs};
@@ -39,21 +40,41 @@ impl Budgy {
 
     pub fn display_navigation_menu(&mut self, ui: &mut egui::Ui) {
         ui.vertical(|ui| {
-            ui.take_available_width();
-            ui.set_min_width(180.0);
             ui.spacing_mut().button_padding = egui::vec2(12.0, 3.0);
 
-            let size = egui::vec2(ui.available_width(), 30.0);
+            ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
+                if ui
+                    .add_sized(
+                        vec2(70.0 - ui.spacing().button_padding.x * 2.0, 30.0),
+                        egui::Button::new(if self.nav_collapsed {
+                            "▶️"
+                        } else {
+                            "◀️"
+                        }),
+                    )
+                    .on_hover_text(if self.nav_collapsed {
+                        "Expand sidebar"
+                    } else {
+                        "Collapse sidebar"
+                    })
+                    .clicked()
+                {
+                    self.nav_collapsed = !self.nav_collapsed;
+                }
+            });
 
+            let size = egui::vec2(ui.available_width(), 30.0);
             if ui
                 .add_sized(
                     size,
-                    egui::Button::image_and_text(
-                        egui::include_image!("../../assets/icons/home.svg"),
-                        "Dashboard",
-                    )
+                    egui::Button::new(if self.nav_collapsed {
+                        "🏠"
+                    } else {
+                        "Dashboard"
+                    })
                     .selected(self.current_tab == Tabs::Dashboard),
                 )
+                .on_hover_text("Dashboard")
                 .clicked()
             {
                 self.current_tab = Tabs::Dashboard;
@@ -62,12 +83,14 @@ impl Budgy {
             if ui
                 .add_sized(
                     size,
-                    egui::Button::image_and_text(
-                        egui::include_image!("../../assets/icons/document.svg"),
-                        "Statement",
-                    )
+                    egui::Button::new(if self.nav_collapsed {
+                        "📄"
+                    } else {
+                        "Statement"
+                    })
                     .selected(self.current_tab == Tabs::Statement),
                 )
+                .on_hover_text("Statement")
                 .clicked()
             {
                 self.current_tab = Tabs::Statement;
@@ -76,12 +99,10 @@ impl Budgy {
             if ui
                 .add_sized(
                     size,
-                    egui::Button::image_and_text(
-                        egui::include_image!("../../assets/icons/wallet.svg"),
-                        "Budget",
-                    )
-                    .selected(self.current_tab == Tabs::Budget),
+                    egui::Button::new(if self.nav_collapsed { "💳" } else { "Budget" })
+                        .selected(self.current_tab == Tabs::Budget),
                 )
+                .on_hover_text("Budget")
                 .clicked()
             {
                 self.current_tab = Tabs::Budget;
@@ -90,12 +111,14 @@ impl Budgy {
             if ui
                 .add_sized(
                     size,
-                    egui::Button::image_and_text(
-                        egui::include_image!("../../assets/icons/invoice.svg"),
-                        "Summary",
-                    )
+                    egui::Button::new(if self.nav_collapsed {
+                        "📨"
+                    } else {
+                        "Summary"
+                    })
                     .selected(self.current_tab == Tabs::BudgetSummary),
                 )
+                .on_hover_text("Summary")
                 .clicked()
             {
                 self.current_tab = Tabs::BudgetSummary;
@@ -104,12 +127,14 @@ impl Budgy {
             if ui
                 .add_sized(
                     size,
-                    egui::Button::image_and_text(
-                        egui::include_image!("../../assets/icons/document.svg"),
-                        "Settings",
-                    )
+                    egui::Button::new(if self.nav_collapsed {
+                        "⚙️"
+                    } else {
+                        "Settings"
+                    })
                     .selected(self.current_tab == Tabs::Settings),
                 )
+                .on_hover_text("Settings")
                 .clicked()
             {
                 self.current_tab = Tabs::Settings;

@@ -5,7 +5,7 @@ mod ui;
 
 use std::sync::mpsc::{Receiver, Sender, channel};
 
-use egui::{Color32, Frame, Key, KeyboardShortcut, Modifiers, ViewportCommand};
+use egui::{Color32, Frame, Key, KeyboardShortcut, Modifiers, Theme, ViewportCommand};
 use polars::{error::PolarsError, frame::DataFrame, lazy::frame::LazyFrame};
 use thiserror::Error;
 
@@ -53,6 +53,8 @@ pub struct Budgy {
 
     budget: Budget,
     last_error: Option<String>,
+
+    nav_collapsed: bool,
 }
 
 impl Budgy {
@@ -82,6 +84,8 @@ impl Budgy {
 
             budget,
             last_error: None,
+
+            nav_collapsed: false,
         }
     }
 }
@@ -181,6 +185,9 @@ impl eframe::App for Budgy {
                     .outer_margin(5.0)
                     .inner_margin(10.0),
             )
+            .exact_size(if self.nav_collapsed { 70.0 } else { 180.0 })
+            .show_separator_line(false)
+            .resizable(false)
             .show(ui, |ui| {
                 self.display_navigation_menu(ui);
             });
