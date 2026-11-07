@@ -45,7 +45,7 @@ impl Budgy {
             ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
                 if ui
                     .add_sized(
-                        vec2(70.0 - ui.spacing().button_padding.x * 2.0, 30.0),
+                        vec2(70.0 - ui.spacing().button_padding.x, 30.0),
                         egui::Button::new(if self.nav_collapsed {
                             "▶️"
                         } else {

@@ -1,12 +1,30 @@
-use egui::{Align, Layout, vec2};
+use egui::{Align, Layout, Theme, vec2};
 
 use crate::app::{Budgy, BudgyError, file::BudgyFileType};
 
 impl Budgy {
-    pub fn display_settings(&self, ui: &mut egui::Ui) -> Result<(), BudgyError> {
+    pub fn display_settings(&mut self, ui: &mut egui::Ui) -> Result<(), BudgyError> {
         ui.spacing_mut().button_padding = vec2(18.0, 6.0);
 
         ui.heading("Settings");
+        ui.separator();
+
+        ui.horizontal(|ui| {
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                ui.selectable_value(&mut self.theme, Theme::Light, "Light");
+                ui.selectable_value(&mut self.theme, Theme::Dark, "Dark");
+                ui.separator();
+                if ui.button("System").clicked() {
+                    self.theme = ui.ctx().system_theme().unwrap_or(Theme::Dark);
+                }
+
+                ui.vertical(|ui| {
+                    ui.heading("Theme");
+                    ui.label("Select your preferred theme");
+                });
+            });
+        });
+
         ui.separator();
 
         ui.horizontal(|ui| {

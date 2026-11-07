@@ -63,7 +63,7 @@ impl Budgy {
     }
 
     pub fn open_web_app() {
-        if let Err(e) = webbrowser::open("https://jodusmelodus-dev.github.io/budgy/") {
+        if let Err(e) = webbrowser::open("https://jodusmelodus.github.io/budgy/") {
             log::error!("Failed to open web link: {e}");
         }
     }

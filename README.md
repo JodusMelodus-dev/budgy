@@ -1,22 +1,22 @@
 # Budgy
 
-> ![Budgie](assets/budgie3_21x24.png)
-> Welcome to Budgy!
-> 
-> Budgy is a free open-source budgeting application built in Rust using the polars library. See the quick-start guide below to get started.
+An empowering tool which allows you to view your budget.
 
-> **Notice:** Budgy currently only works with `Capitec` banking statement. If your statement is the same values and format as `Capitec`'s then it will also work. Support for other banks is something we would like to accomplish.
+## Features
 
-## Quick-start Guide
+- **Budget persistence** - Your budget is stored locally in the browser, and you can import an existing one from the `Settings` tab.
+- **Multiple Themes** - Supports dark and light mode, with a system default.
 
-- Start by navigating to the `Statement` tab.
-- Then import your past month's bank statement `.csv` from the `File` menu by selecting the `Import Statement` option.
-- Ensure your budget is setup correctly on the `Budget` tab.
-- View your summary on the `Summary` tab.
-- Export your generated summary using the `File` menu and selecting the `Export Summary` option.
+## Installation
 
-### Exporting bank statement
+| WebApp                                                                  | Desktop App                                                                                  |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Cross-platform                                                          | Windows Only                                                                                 |
+| Follow this [link](https://jodusmelodus.github.io/budgy/) to the WebApp | Download the latest [release](https://github.com/JodusMelodus/budgy/releases) and install it |
 
-In your banking app, navigate to your account and look for the `Statement` option or a similar option. Check if there is an option to export a statement as a `CSV` file.
+## Quick start guide
 
-For `Capitec` users, select your `Main Account`, `Savings Plans` or any other account. Click on the `Statement >` button, select a date range (Suggested: Last 1 month), and select the `export CSV` option.
+1. Import your statement in the statement tab.
+2. Import your previous budget summary from the `File` menu.
+3. Navigate to the `Summary` tab to view your balances.
+4. Export the summary from the `File` menu.
