@@ -7,7 +7,7 @@
 			"problemMatcher": [
 				"$rustc"
 			],
-			"label": "rust: cargo run"
+			"label": "Budgy: cargo run"
 		},
 		{
 			"type": "cargo",
@@ -15,19 +15,25 @@
 			"problemMatcher": [
 				"$rustc"
 			],
-			"label": "rust: cargo build"
+			"label": "Budgy: cargo build"
 		},
 		{
 			"type": "shell",
 			"command": "trunk build",
 			"problemMatcher": [],
-			"label": "rust: trunk build"
+			"label": "Budgy: trunk build"
 		},
 		{
 			"type": "shell",
 			"command": "trunk serve",
 			"problemMatcher": [],
-			"label": "rust: trunk serve",
+			"label": "Budgy: trunk serve",
+		},
+		{
+			"type": "shell",
+			"command": "cargo packager --release",
+			"problemMatcher": [],
+			"label": "Budgy: Build Installer"
 		}
 	]
 }
